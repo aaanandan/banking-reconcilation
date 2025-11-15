@@ -1,0 +1,41 @@
+sequenceDiagram
+    participant U as User
+    participant UI as Live UI (SI-05)
+    participant DP as Data Prep (DP-01/02/03)
+    participant SYS as System Engine
+    participant MT as Matching Engine (MT-01..06)
+    participant BE as Banking Exceptions (BE-01..07)
+    participant LS as Learning & Scoring (LS-01..06)
+    participant HR as Human Reasoning Layer (HR-01..04)
+    participant SR as Safety Checks (SR-01..08)
+
+    U->>UI: Upload Bank + Ledger Files
+    UI->>DP: Validate + Clean + Map (DP-01..03)
+    DP-->>UI: Diagnostics + OK to proceed
+
+    UI->>SYS: Start Reconciliation
+    SYS->>MT: Run all match types (MT-01..06)
+    SYS->>BE: Run exception paths (BE-01..07)
+    SYS->>HR: Behavior understanding (HR-01..04)
+    SYS->>LS: Score + rank all candidates (LS-01..06)
+    SYS->>SR: Apply Safety Rules (SR-01..08)
+
+    SYS-->>UI: Show suggestions + Convergence % (SI-05)
+
+    U->>UI: Review & Confirm/Override (UA-01/02)
+    UI->>SR: Validate safety before approval
+    SR-->>UI: Confirm safe (or warn)
+
+    UI->>LS: Learn from user changes (LS-03/04)
+    LS->>SYS: Update scoring + thresholds
+
+    SYS-->>UI: Live update results + Convergence %
+
+    loop Until 100% Coverage Achieved
+        U->>UI: Continue approvals
+        UI->>SYS: Re-evaluate remaining matches
+        SYS-->>UI: Progress updates
+    end
+
+    SYS-->>UI: Final Report (No blind auto - SI-04)
+    UI-->>U: All matched or justified ✅
