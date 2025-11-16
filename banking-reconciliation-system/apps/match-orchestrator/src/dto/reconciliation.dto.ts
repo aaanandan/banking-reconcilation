@@ -385,6 +385,78 @@ export class AlgorithmStatisticsDto {
 }
 
 /**
+ * Convergence Step DTO
+ * Tracks match rate improvement at each workflow step
+ */
+export class ConvergenceStepDto {
+  @ApiProperty({
+    description: 'Algorithm/step name',
+    example: 'MT-01',
+  })
+  algorithm: string;
+
+  @ApiProperty({
+    description: 'Number of matches found in this step',
+    example: 4,
+  })
+  matchesFound: number;
+
+  @ApiProperty({
+    description: 'Match rate before this step (0.0 to 1.0)',
+    example: 0.0,
+  })
+  matchRateBefore: number;
+
+  @ApiProperty({
+    description: 'Match rate after this step (0.0 to 1.0)',
+    example: 0.4,
+  })
+  matchRateAfter: number;
+
+  @ApiProperty({
+    description: 'Improvement in match rate (0.0 to 1.0)',
+    example: 0.4,
+  })
+  improvement: number;
+}
+
+/**
+ * Convergence Metrics DTO
+ * Overall convergence analysis for the reconciliation workflow
+ */
+export class ConvergenceMetricsDto {
+  @ApiProperty({
+    description: 'Initial match rate before any matching (always 0.0)',
+    example: 0.0,
+  })
+  initialMatchRate: number;
+
+  @ApiProperty({
+    description: 'Final match rate after all algorithms (0.0 to 1.0)',
+    example: 0.9,
+  })
+  finalMatchRate: number;
+
+  @ApiProperty({
+    description: 'Total improvement from initial to final (0.0 to 1.0)',
+    example: 0.9,
+  })
+  totalImprovement: number;
+
+  @ApiProperty({
+    description: 'Step-by-step convergence tracking',
+    type: [ConvergenceStepDto],
+  })
+  steps: ConvergenceStepDto[];
+
+  @ApiProperty({
+    description: 'Number of steps executed',
+    example: 2,
+  })
+  stepsExecuted: number;
+}
+
+/**
  * Reconciliation Response DTO
  * Output from the orchestration workflow
  */
@@ -445,6 +517,12 @@ export class ReconciliationResponseDto {
     example: 'MT-01 → MT-02',
   })
   workflow: string;
+
+  @ApiProperty({
+    description: 'Convergence metrics showing match rate improvement per step',
+    type: ConvergenceMetricsDto,
+  })
+  convergence: ConvergenceMetricsDto;
 }
 
 /**

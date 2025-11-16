@@ -10,6 +10,8 @@ import {
   AlgorithmStatisticsDto,
   ProgressUpdateDto,
   ProgressStatus,
+  ConvergenceMetricsDto,
+  ConvergenceStepDto,
 } from './dto/reconciliation.dto';
 
 /**
@@ -220,6 +222,68 @@ export class MatchOrchestratorService {
         matchRate: Math.round(mt02MatchRate * 1000) / 1000, // Round to 3 decimals
       },
     ];
+  }
+
+  /**
+   * Calculate Convergence Metrics
+   *
+   * Tracks match rate improvement at each algorithm step:
+   * - Step 0: Initial (0% matched)
+   * - Step 1: After MT-01 (exact matches)
+   * - Step 2: After MT-02 (fuzzy matches)
+   *
+   * @param totalBankTransactions - Total number of bank transactions
+   * @param exactMatches - Exact matches from MT-01
+   * @param fuzzyMatches - Fuzzy matches from MT-02
+   * @returns Convergence metrics with step-by-step improvements
+   */
+  private calculateConvergenceMetrics(
+    totalBankTransactions: number,
+    exactMatches: any[],
+    fuzzyMatches: any[],
+  ): ConvergenceMetricsDto {
+    const steps: ConvergenceStepDto[] = [];
+
+    // Initial state: 0 matches, 0% match rate
+    const initialMatchRate = 0.0;
+    let currentMatchCount = 0;
+    let currentMatchRate = 0.0;
+
+    // Step 1: MT-01 Exact Match
+    const mt01MatchesBefore = currentMatchRate;
+    currentMatchCount += exactMatches.length;
+    currentMatchRate = totalBankTransactions > 0 ? currentMatchCount / totalBankTransactions : 0;
+    const mt01MatchesAfter = currentMatchRate;
+
+    steps.push({
+      algorithm: 'MT-01',
+      matchesFound: exactMatches.length,
+      matchRateBefore: Math.round(mt01MatchesBefore * 1000) / 1000,
+      matchRateAfter: Math.round(mt01MatchesAfter * 1000) / 1000,
+      improvement: Math.round((mt01MatchesAfter - mt01MatchesBefore) * 1000) / 1000,
+    });
+
+    // Step 2: MT-02 Fuzzy Match
+    const mt02MatchesBefore = currentMatchRate;
+    currentMatchCount += fuzzyMatches.length;
+    currentMatchRate = totalBankTransactions > 0 ? currentMatchCount / totalBankTransactions : 0;
+    const mt02MatchesAfter = currentMatchRate;
+
+    steps.push({
+      algorithm: 'MT-02',
+      matchesFound: fuzzyMatches.length,
+      matchRateBefore: Math.round(mt02MatchesBefore * 1000) / 1000,
+      matchRateAfter: Math.round(mt02MatchesAfter * 1000) / 1000,
+      improvement: Math.round((mt02MatchesAfter - mt02MatchesBefore) * 1000) / 1000,
+    });
+
+    return {
+      initialMatchRate: Math.round(initialMatchRate * 1000) / 1000,
+      finalMatchRate: Math.round(currentMatchRate * 1000) / 1000,
+      totalImprovement: Math.round((currentMatchRate - initialMatchRate) * 1000) / 1000,
+      steps,
+      stepsExecuted: steps.length,
+    };
   }
 
   /**
@@ -442,6 +506,12 @@ export class MatchOrchestratorService {
         fuzzyMatches,
       );
 
+      const convergenceMetrics = this.calculateConvergenceMetrics(
+        request.bankTransactions.length,
+        exactMatches,
+        fuzzyMatches,
+      );
+
       const overallMatchRate =
         request.bankTransactions.length > 0
           ? allMatches.length / request.bankTransactions.length
@@ -463,6 +533,7 @@ export class MatchOrchestratorService {
         algorithmStatistics,
         workflow: 'MT-01 → MT-02',
         timestamp: new Date().toISOString(),
+        convergence: convergenceMetrics,
       };
 
       this.logger.log(
