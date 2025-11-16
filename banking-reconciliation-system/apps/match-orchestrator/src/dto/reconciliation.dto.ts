@@ -7,8 +7,120 @@ import {
   IsOptional,
   IsDateString,
   Min,
+  IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+
+/**
+ * Field Quality DTO
+ * Describes the quality and characteristics of a field
+ */
+export class FieldQualityDto {
+  @ApiProperty({ description: 'Field is present in data', example: true })
+  @IsBoolean()
+  present: boolean;
+
+  @ApiProperty({ description: 'Percentage of records with this field populated (0.0 to 1.0)', example: 0.95 })
+  @IsNumber()
+  populatedRate: number;
+
+  @ApiProperty({ description: 'Quality score (0.0 to 1.0)', example: 0.98, required: false })
+  @IsOptional()
+  @IsNumber()
+  qualityScore?: number;
+
+  @ApiProperty({ description: 'Usefulness score for matching (0.0 to 1.0)', example: 0.96, required: false })
+  @IsOptional()
+  @IsNumber()
+  usefulnessScore?: number;
+}
+
+/**
+ * Core Fields Profile DTO
+ * Quality metrics for core transaction fields (date, amount, description)
+ */
+export class CoreFieldsProfileDto {
+  @ApiProperty({ type: FieldQualityDto })
+  @ValidateNested()
+  @Type(() => FieldQualityDto)
+  date: FieldQualityDto;
+
+  @ApiProperty({ type: FieldQualityDto })
+  @ValidateNested()
+  @Type(() => FieldQualityDto)
+  amount: FieldQualityDto;
+
+  @ApiProperty({ type: FieldQualityDto })
+  @ValidateNested()
+  @Type(() => FieldQualityDto)
+  description: FieldQualityDto;
+}
+
+/**
+ * Optional Fields Profile DTO
+ * Quality metrics for optional transaction fields
+ */
+export class OptionalFieldsProfileDto {
+  @ApiProperty({ type: FieldQualityDto, required: false })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => FieldQualityDto)
+  refNumber?: FieldQualityDto;
+
+  @ApiProperty({ type: FieldQualityDto, required: false })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => FieldQualityDto)
+  txnType?: FieldQualityDto;
+
+  @ApiProperty({ type: FieldQualityDto, required: false })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => FieldQualityDto)
+  payerPayee?: FieldQualityDto;
+}
+
+/**
+ * Source Profile DTO
+ * Field quality profile for a data source (bank or ledger)
+ */
+export class SourceProfileDto {
+  @ApiProperty({ description: 'Total number of records in source', example: 500 })
+  @IsNumber()
+  totalRecords: number;
+
+  @ApiProperty({ type: CoreFieldsProfileDto })
+  @ValidateNested()
+  @Type(() => CoreFieldsProfileDto)
+  coreFields: CoreFieldsProfileDto;
+
+  @ApiProperty({ type: OptionalFieldsProfileDto, required: false })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => OptionalFieldsProfileDto)
+  optionalFields?: OptionalFieldsProfileDto;
+}
+
+/**
+ * Field Profile DTO
+ * Complete field quality profile for bank and ledger data
+ * Used by MT services to intelligently weight fields during matching
+ */
+export class FieldProfileDto {
+  @ApiProperty({ description: 'Reconciliation ID this profile belongs to', example: 'recon_001' })
+  @IsString()
+  reconciliationId: string;
+
+  @ApiProperty({ type: SourceProfileDto })
+  @ValidateNested()
+  @Type(() => SourceProfileDto)
+  bank: SourceProfileDto;
+
+  @ApiProperty({ type: SourceProfileDto })
+  @ValidateNested()
+  @Type(() => SourceProfileDto)
+  ledger: SourceProfileDto;
+}
 
 /**
  * Bank Transaction DTO
@@ -161,6 +273,16 @@ export class ReconciliationRequestDto {
   @ValidateNested()
   @Type(() => FuzzyThresholdsDto)
   fuzzyThresholds?: FuzzyThresholdsDto;
+
+  @ApiProperty({
+    description: 'Optional field quality profile for intelligent field weighting',
+    type: FieldProfileDto,
+    required: false,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => FieldProfileDto)
+  fieldProfile?: FieldProfileDto;
 }
 
 /**

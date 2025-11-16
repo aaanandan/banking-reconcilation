@@ -31,22 +31,31 @@ export class MatchOrchestratorService {
    * Call MT-01 Exact Match Service
    * @param bankTransactions - Array of bank transactions
    * @param ledgerTransactions - Array of ledger transactions
+   * @param fieldProfile - Optional field quality profile
    * @returns MT-01 response with exact matches
    */
   async callMT01Exact(
     bankTransactions: BankTransactionDto[],
     ledgerTransactions: LedgerTransactionDto[],
+    fieldProfile?: any,
   ): Promise<any> {
     this.logger.log(
       `Calling MT-01 Exact Match Service with ${bankTransactions.length} bank txns, ${ledgerTransactions.length} ledger txns`,
     );
 
     try {
+      const payload: any = {
+        bankTransactions,
+        ledgerTransactions,
+      };
+
+      if (fieldProfile) {
+        payload.fieldProfile = fieldProfile;
+        this.logger.log('Including field profile in MT-01 request');
+      }
+
       const response = await firstValueFrom(
-        this.httpService.post(this.MT01_URL, {
-          bankTransactions,
-          ledgerTransactions,
-        }),
+        this.httpService.post(this.MT01_URL, payload),
       );
 
       this.logger.log(
@@ -65,12 +74,14 @@ export class MatchOrchestratorService {
    * @param bankTransactions - Array of bank transactions (unmatched)
    * @param ledgerTransactions - Array of ledger transactions (available)
    * @param fuzzyThresholds - Optional fuzzy matching thresholds
+   * @param fieldProfile - Optional field quality profile
    * @returns MT-02 response with fuzzy matches
    */
   async callMT02Fuzzy(
     bankTransactions: BankTransactionDto[],
     ledgerTransactions: LedgerTransactionDto[],
     fuzzyThresholds?: FuzzyThresholdsDto,
+    fieldProfile?: any,
   ): Promise<any> {
     this.logger.log(
       `Calling MT-02 Fuzzy Match Service with ${bankTransactions.length} bank txns, ${ledgerTransactions.length} ledger txns`,
@@ -84,6 +95,11 @@ export class MatchOrchestratorService {
 
       if (fuzzyThresholds) {
         payload.thresholds = fuzzyThresholds;
+      }
+
+      if (fieldProfile) {
+        payload.fieldProfile = fieldProfile;
+        this.logger.log('Including field profile in MT-02 request');
       }
 
       const response = await firstValueFrom(
@@ -223,6 +239,7 @@ export class MatchOrchestratorService {
     const mt01Response = await this.callMT01Exact(
       request.bankTransactions,
       request.ledgerTransactions,
+      request.fieldProfile,
     );
 
     const exactMatches = mt01Response.matches || [];
@@ -253,6 +270,7 @@ export class MatchOrchestratorService {
         unmatchedBankTransactions,
         availableLedgerTransactions,
         request.fuzzyThresholds,
+        request.fieldProfile,
       );
 
       fuzzyMatches = mt02Response.matches || [];
