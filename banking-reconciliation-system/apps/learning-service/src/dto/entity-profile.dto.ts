@@ -241,3 +241,83 @@ export class BuildProfileFromTransactionsDto {
   @IsString()
   entityName?: string;
 }
+
+/**
+ * Bank Specific Behavior DTO
+ * Per-bank behavior patterns for an entity
+ */
+export class BankSpecificBehaviorDto {
+  @ApiProperty({ description: 'Date offset in days (e.g., -2 means bank is 2 days behind)' })
+  @IsNumber()
+  dateOffset: number;
+
+  @ApiProperty({ description: 'Most reliable field for matching this entity at this bank' })
+  @IsString()
+  mostReliableField: string;
+
+  @ApiPropertyOptional({ description: 'Reference number format pattern for this bank' })
+  @IsOptional()
+  @IsString()
+  refNumberFormat?: string;
+}
+
+/**
+ * Update Bank Behavior DTO
+ * Update per-bank behavior for an entity
+ */
+export class UpdateBankBehaviorDto {
+  @ApiProperty({ description: 'Bank ID' })
+  @IsString()
+  bankId: string;
+
+  @ApiProperty({ description: 'Bank-specific behavior data', type: BankSpecificBehaviorDto })
+  @IsObject()
+  behavior: BankSpecificBehaviorDto;
+}
+
+/**
+ * Bank Behavior Response DTO
+ * Per-bank behavior data for an entity
+ */
+export class BankBehaviorResponseDto {
+  @ApiProperty({ description: 'Entity ID' })
+  entityId: string;
+
+  @ApiProperty({ description: 'Bank ID' })
+  bankId: string;
+
+  @ApiProperty({ description: 'Bank-specific behavior', type: BankSpecificBehaviorDto })
+  behavior: BankSpecificBehaviorDto;
+
+  @ApiProperty({ description: 'Last updated timestamp' })
+  lastUpdated: Date;
+}
+
+/**
+ * All Banks Behavior Response DTO
+ * All per-bank behaviors for an entity
+ */
+export class AllBanksBehaviorResponseDto {
+  @ApiProperty({ description: 'Entity ID' })
+  entityId: string;
+
+  @ApiProperty({
+    description: 'Per-bank behaviors',
+    type: 'object',
+    additionalProperties: {
+      type: 'object',
+      properties: {
+        dateOffset: { type: 'number' },
+        mostReliableField: { type: 'string' },
+        refNumberFormat: { type: 'string' },
+      },
+    },
+  })
+  bankSpecificBehavior: Record<string, BankSpecificBehaviorDto>;
+
+  @ApiProperty({ description: 'Number of banks tracked' })
+  banksCount: number;
+
+  @ApiProperty({ description: 'Last updated timestamp' })
+  lastUpdated: Date;
+}

@@ -19,6 +19,10 @@ import {
   UpdateEntityProfileDto,
   EntityProfileResponseDto,
   EntityProfileStatsDto,
+  BankSpecificBehaviorDto,
+  UpdateBankBehaviorDto,
+  BankBehaviorResponseDto,
+  AllBanksBehaviorResponseDto,
 } from './dto/entity-profile.dto';
 
 /**
@@ -407,8 +411,129 @@ export class LearningServiceService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // FUTURE STEPS (44-45)
+  // STEP 44: PER-BANK BEHAVIOR TRACKING
   // ═══════════════════════════════════════════════════════════════════════════
-  // - Step 44: Per-bank behavior tracking
+
+  /**
+   * Update bank-specific behavior for an entity
+   */
+  async updateBankBehavior(
+    entityId: string,
+    dto: UpdateBankBehaviorDto,
+  ): Promise<BankBehaviorResponseDto> {
+    const profile = await this.entityProfileRepo.findOne({
+      where: { entityId },
+    });
+
+    if (!profile) {
+      throw new NotFoundException(`Entity profile '${entityId}' not found`);
+    }
+
+    // Initialize bankSpecificBehavior if null
+    if (!profile.bankSpecificBehavior) {
+      profile.bankSpecificBehavior = {};
+    }
+
+    // Update or add bank-specific behavior
+    profile.bankSpecificBehavior[dto.bankId] = {
+      dateOffset: dto.behavior.dateOffset,
+      mostReliableField: dto.behavior.mostReliableField,
+      refNumberFormat: dto.behavior.refNumberFormat,
+    };
+
+    const updated = await this.entityProfileRepo.save(profile);
+
+    return {
+      entityId: updated.entityId,
+      bankId: dto.bankId,
+      behavior: updated.bankSpecificBehavior[dto.bankId],
+      lastUpdated: updated.lastUpdated,
+    };
+  }
+
+  /**
+   * Get bank-specific behavior for an entity at a specific bank
+   */
+  async getBankBehavior(
+    entityId: string,
+    bankId: string,
+  ): Promise<BankBehaviorResponseDto> {
+    const profile = await this.entityProfileRepo.findOne({
+      where: { entityId },
+    });
+
+    if (!profile) {
+      throw new NotFoundException(`Entity profile '${entityId}' not found`);
+    }
+
+    if (!profile.bankSpecificBehavior || !profile.bankSpecificBehavior[bankId]) {
+      throw new NotFoundException(
+        `No bank-specific behavior found for entity '${entityId}' at bank '${bankId}'`,
+      );
+    }
+
+    return {
+      entityId: profile.entityId,
+      bankId,
+      behavior: profile.bankSpecificBehavior[bankId],
+      lastUpdated: profile.lastUpdated,
+    };
+  }
+
+  /**
+   * Get all bank-specific behaviors for an entity
+   */
+  async getAllBankBehaviors(entityId: string): Promise<AllBanksBehaviorResponseDto> {
+    const profile = await this.entityProfileRepo.findOne({
+      where: { entityId },
+    });
+
+    if (!profile) {
+      throw new NotFoundException(`Entity profile '${entityId}' not found`);
+    }
+
+    const bankSpecificBehavior = profile.bankSpecificBehavior || {};
+    const banksCount = Object.keys(bankSpecificBehavior).length;
+
+    return {
+      entityId: profile.entityId,
+      bankSpecificBehavior,
+      banksCount,
+      lastUpdated: profile.lastUpdated,
+    };
+  }
+
+  /**
+   * Delete bank-specific behavior for an entity at a specific bank
+   */
+  async deleteBankBehavior(
+    entityId: string,
+    bankId: string,
+  ): Promise<{ success: boolean }> {
+    const profile = await this.entityProfileRepo.findOne({
+      where: { entityId },
+    });
+
+    if (!profile) {
+      throw new NotFoundException(`Entity profile '${entityId}' not found`);
+    }
+
+    if (!profile.bankSpecificBehavior || !profile.bankSpecificBehavior[bankId]) {
+      throw new NotFoundException(
+        `No bank-specific behavior found for entity '${entityId}' at bank '${bankId}'`,
+      );
+    }
+
+    // Remove the bank-specific behavior
+    delete profile.bankSpecificBehavior[bankId];
+
+    await this.entityProfileRepo.save(profile);
+
+    return { success: true };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FUTURE STEPS (45)
+  // ═══════════════════════════════════════════════════════════════════════════
   // - Step 45: Pattern learning
 }

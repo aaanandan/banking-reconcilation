@@ -12,6 +12,9 @@ import {
   UpdateEntityProfileDto,
   EntityProfileResponseDto,
   EntityProfileStatsDto,
+  UpdateBankBehaviorDto,
+  BankBehaviorResponseDto,
+  AllBanksBehaviorResponseDto,
 } from './dto/entity-profile.dto';
 
 @ApiTags('Learning')
@@ -177,5 +180,68 @@ export class LearningServiceController {
   @ApiResponse({ status: 404, description: 'Entity profile not found' })
   async getProfileStats(@Param('entityId') entityId: string): Promise<EntityProfileStatsDto> {
     return this.learningServiceService.getProfileStats(entityId);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // STEP 44: PER-BANK BEHAVIOR TRACKING ENDPOINTS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Put('profile/:entityId/bank-behavior')
+  @ApiOperation({ summary: 'Update per-bank behavior for an entity' })
+  @ApiParam({ name: 'entityId', description: 'Entity ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Bank behavior updated successfully',
+    type: BankBehaviorResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'Entity profile not found' })
+  async updateBankBehavior(
+    @Param('entityId') entityId: string,
+    @Body() dto: UpdateBankBehaviorDto,
+  ): Promise<BankBehaviorResponseDto> {
+    return this.learningServiceService.updateBankBehavior(entityId, dto);
+  }
+
+  @Get('profile/:entityId/bank-behavior/:bankId')
+  @ApiOperation({ summary: 'Get bank-specific behavior for an entity' })
+  @ApiParam({ name: 'entityId', description: 'Entity ID' })
+  @ApiParam({ name: 'bankId', description: 'Bank ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Bank behavior retrieved',
+    type: BankBehaviorResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'Entity profile or bank behavior not found' })
+  async getBankBehavior(
+    @Param('entityId') entityId: string,
+    @Param('bankId') bankId: string,
+  ): Promise<BankBehaviorResponseDto> {
+    return this.learningServiceService.getBankBehavior(entityId, bankId);
+  }
+
+  @Get('profile/:entityId/bank-behavior')
+  @ApiOperation({ summary: 'Get all bank-specific behaviors for an entity' })
+  @ApiParam({ name: 'entityId', description: 'Entity ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'All bank behaviors retrieved',
+    type: AllBanksBehaviorResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'Entity profile not found' })
+  async getAllBankBehaviors(@Param('entityId') entityId: string): Promise<AllBanksBehaviorResponseDto> {
+    return this.learningServiceService.getAllBankBehaviors(entityId);
+  }
+
+  @Delete('profile/:entityId/bank-behavior/:bankId')
+  @ApiOperation({ summary: 'Delete bank-specific behavior for an entity' })
+  @ApiParam({ name: 'entityId', description: 'Entity ID' })
+  @ApiParam({ name: 'bankId', description: 'Bank ID' })
+  @ApiResponse({ status: 200, description: 'Bank behavior deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Entity profile or bank behavior not found' })
+  async deleteBankBehavior(
+    @Param('entityId') entityId: string,
+    @Param('bankId') bankId: string,
+  ): Promise<{ success: boolean }> {
+    return this.learningServiceService.deleteBankBehavior(entityId, bankId);
   }
 }
