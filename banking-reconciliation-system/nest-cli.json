@@ -55,6 +55,15 @@
         "tsConfigPath": "apps/mt-02-near-exact/tsconfig.app.json"
       }
     },
+    "mt-03-bank-fees": {
+      "type": "application",
+      "root": "apps/mt-03-bank-fees",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-03-bank-fees/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-03-bank-fees/tsconfig.app.json"
+      }
+    },
     "question-manager-service": {
       "type": "application",
       "root": "apps/question-manager-service",
