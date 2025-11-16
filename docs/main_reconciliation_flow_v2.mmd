@@ -1,0 +1,200 @@
+sequenceDiagram
+    participant U as User
+    participant UI as UI Service
+    participant DP as Data Prep Service
+    participant SM as State Manager
+    participant ORC as Orchestrator Service<br/>(ML-Driven)
+    participant TIC as Threshold Impact<br/>Calculator
+    participant MT as Matching Services<br/>(MT-01..MT-16)
+    participant SR as Safety Service
+    participant LS as Learning Service
+
+    %% ═══════════════════════════════════════════════════════════
+    %% PHASE 1: DATA UPLOAD & PREPARATION (DETAILED)
+    %% ═══════════════════════════════════════════════════════════
+    
+    U->>UI: Upload Bank + Ledger Files
+    
+    UI->>DP: analyze_files({<br/>  bank_file: file_data,<br/>  ledger_file: file_data<br/>})
+    
+    Note over DP: Step 1A: Column Detection & Auto-Mapping
+    
+    DP->>DP: detect_columns()<br/>• Read headers<br/>• Sample first 100 rows<br/>• Identify data types<br/>• Apply ML heuristics
+    
+    DP->>DP: auto_suggest_mappings()<br/>Bank: "Date"→core.date, "Amt"→core.amount<br/>Ledger: "Transaction Date"→core.date
+    
+    DP-->>UI: {<br/>  bank_columns: ["Date", "Desc", "Amt", "Type", "RefNo"],<br/>  bank_suggestions: {<br/>    "Date": "core.date",<br/>    "Desc": "core.description",<br/>    "Amt": "core.amount",<br/>    "Type": "optional.txn_type",<br/>    "RefNo": "optional.ref_number"<br/>  },<br/>  ledger_columns: ["Transaction Date", "Particulars", ...],<br/>  ledger_suggestions: {...},<br/>  warnings: ["Bank: No payer/payee column detected"]<br/>}
+    
+    UI-->>U: 📊 Column Mapping Interface<br/>━━━━━━━━━━━━━━━━━━━━━━<br/>Bank: Date → Core.Date ✅<br/>      Amt → Core.Amount ✅<br/>      Type → Txn Type (optional)<br/>⚠️ No payer/payee column<br/><br/>[Confirm] [Modify Mapping]
+    
+    U->>UI: Confirm Mappings / Override
+    
+    Note over UI,DP: Step 1B: Validation & Normalization
+    
+    UI->>DP: validate_and_prepare({<br/>  bank_mapping: {confirmed_mappings},<br/>  ledger_mapping: {confirmed_mappings},<br/>  files: {bank_file, ledger_file}<br/>})
+    
+    DP->>DP: validate_core_fields()<br/>✓ Bank has: date, amount, desc<br/>✓ Ledger has: date, amount, desc
+    
+    alt Core Fields Missing
+        DP-->>UI: {<br/>  status: "error",<br/>  errors: ["Ledger missing Date column"]<br/>}
+        UI-->>U: ❌ Cannot proceed - Fix mapping
+    else Core Fields Present
+        DP->>DP: normalize_data()<br/>• Standardize dates (ISO format)<br/>• Parse amounts (handle signs)<br/>• Clean descriptions<br/>• Normalize txn types (CR→credit)<br/>• Clean reference numbers<br/>• Detect anomalies
+        
+        DP->>DP: calculate_data_quality()<br/>• Missing value %<br/>• Format consistency<br/>• Duplicate detection<br/>• Anomaly count
+        
+        DP->>DP: build_field_profile()<br/>For each optional field:<br/>• Presence rate (% populated)<br/>• Uniqueness (for ref numbers)<br/>• Pattern consistency
+        
+        DP-->>UI: {<br/>  status: "ready",<br/>  total_txns: 500,<br/>  diagnostics: {<br/>    "bank": {<br/>      "core_quality": 0.98,<br/>      "has_ref_numbers": true (95% populated),<br/>      "has_txn_type": true (100% populated),<br/>      "has_payer_payee": false,<br/>      "ref_number_uniqueness": 0.99,<br/>      "anomalies": 2 (duplicate refs)<br/>    },<br/>    "ledger": {<br/>      "core_quality": 0.95,<br/>      "has_ref_numbers": true (80% populated),<br/>      "has_txn_type": true (100% populated),<br/>      "has_payer_payee": true (90% populated),<br/>      "payer_payee_diversity": 0.87<br/>    },<br/>    "overall_quality": 0.92<br/>  }<br/>}
+        
+        UI->>SM: initialize_state({<br/>  total_txns: 500,<br/>  field_profile: {diagnostics},<br/>  mappings: {bank_mapping, ledger_mapping}<br/>})
+        
+        SM-->>UI: {<br/>  state_id: "recon_001",<br/>  all_txns: "unmatched"<br/>}
+        
+        UI-->>U: ✅ Ready - 500 transactions loaded<br/>📊 Data Quality: 92%<br/>━━━━━━━━━━━━━━━━━━━━━━<br/>Bank: ✅ Ref Numbers (95%)<br/>      ✅ Txn Type (100%)<br/>      ⚠️ No Payer/Payee<br/>Ledger: ✅ Ref Numbers (80%)<br/>        ✅ Payer/Payee (90%)<br/><br/>System will use available fields<br/>for matching<br/>[Start Reconciliation]
+    end
+
+    %% ═══════════════════════════════════════════════════════════
+    %% PHASE 2: ORCHESTRATOR INITIALIZATION (WITH FIELD AWARENESS)
+    %% ═══════════════════════════════════════════════════════════
+    
+    U->>UI: Start Reconciliation
+    UI->>ORC: start_reconciliation({<br/>  state_id: "recon_001",<br/>  field_profile: {from_data_prep}<br/>})
+    
+    ORC->>ORC: Load ML Model<br/>Analyze Field Profile<br/>Adapt Matching Strategy
+    
+    Note over ORC: Adaptive Strategy Selection:<br/>✓ Ref numbers available (95%+80%) → Prioritize exact ref matching<br/>✓ Txn type available (100%+100%) → Enable safety checks<br/>✓ Payer/payee in ledger (90%) → Use for fuzzy boost<br/>✗ No payer/payee in bank → Skip payer-based steps
+    
+    ORC->>ORC: Determine Step Sequence<br/>Based on field availability:<br/>Step 1 (Exact) - always first<br/>Step 1B (Ref Match) - high priority (refs available)<br/>Step 7 (Duplicates) - early (refs help detect)<br/>Step 2 (Near-Exact) - standard priority<br/>Step 12 (High-Vol Payer) - skip (no bank payer field)
+    
+    ORC->>SM: get_unmatched_transactions()
+    SM-->>ORC: {unmatched_txns: [1..500]}
+
+    %% ═══════════════════════════════════════════════════════════
+    %% PHASE 3: EXACT MATCH AUTO-COMMIT (Step 1) - WITH ADAPTIVE LOGIC
+    %% ═══════════════════════════════════════════════════════════
+    
+    ORC->>MT: MT-01.exact_match({<br/>  txns: [1..500],<br/>  thresholds: {strict},<br/>  field_profile: {available_fields}<br/>})
+    
+    Note over MT: MT-01 Adaptive Logic:<br/>Uses core fields (date, amount, desc)<br/>+ Optional ref_number if available (99% unique)<br/>+ Optional txn_type if available (safety check)
+    
+    MT-->>ORC: {<br/>  matched: 450,<br/>  candidates: [{<br/>    bank_id: 1,<br/>    ledger_id: 1,<br/>    match_basis: ["date", "amount", "desc", "ref_number"],<br/>    confidence: 1.0<br/>  }, ...],<br/>  field_usage: {<br/>    ref_number_matched: 430,<br/>    txn_type_validated: 450,<br/>    payer_payee_used: 0 (not available)<br/>  }<br/>}
+    
+    ORC->>SR: validate_auto_commit(matched: 450)
+    SR->>SR: Check High-Value<br/>Check High-Volume
+    SR-->>ORC: {safe_to_commit: 445, require_review: 5}
+    
+    ORC->>SM: commit_matches(txn_ids: [1..445], type: "exact")
+    SM-->>ORC: {committed: 445, status: "success"}
+    
+    ORC->>SM: flag_for_review(txn_ids: [446..450], reason: "high_value")
+    SM-->>ORC: {flagged: 5}
+    
+    ORC->>UI: update_progress({committed: 445, flagged: 5, remaining: 50})
+    UI-->>U: 🎯 445 Exact Matches Auto-Committed<br/>⚠️ 5 High-Value Need Review<br/>⏳ 50 Pending
+
+    %% ═══════════════════════════════════════════════════════════
+    %% PHASE 4: REMAINING STEPS ORCHESTRATION
+    %% ═══════════════════════════════════════════════════════════
+    
+    ORC->>ORC: ML determines next step: MT-07<br/>(Duplicate Postings - high confidence)
+    
+    ORC->>SM: get_unmatched_transactions()
+    SM-->>ORC: {unmatched_txns: [451..500]}
+    
+    ORC->>MT: MT-07.duplicate_postings(txns: [451..500], thresholds: {...})
+    MT-->>ORC: {matched: 8, candidates: [...]}
+    
+    ORC->>SM: commit_matches(txn_ids: [...], type: "duplicate")
+    SM-->>ORC: {committed: 8}
+    
+    ORC->>UI: update_progress({total_committed: 453, remaining: 47})
+    UI-->>U: ✅ 453 Matched | ⏳ 47 Remaining
+
+    Note over ORC,MT: Orchestrator continues through<br/>MT-02, MT-03, MT-04... MT-16<br/>based on ML-learned sequence
+
+    %% ═══════════════════════════════════════════════════════════
+    %% PHASE 5: USER REVIEW LOOP (DETAILED IN SUB-DIAGRAM)
+    %% ═══════════════════════════════════════════════════════════
+    
+    rect rgb(240, 248, 255)
+        Note over U,LS: USER REVIEW PHASE - See Detailed Sub-Diagram
+        
+        ORC->>UI: present_for_review({step: 5, txn: 127, suggestions: [...]})
+        UI-->>U: Show Step 5 - Transaction #127<br/>✓ Current Match | ⚠️ Alternatives
+        
+        U->>UI: Approve / Override / Modify Threshold
+        
+        alt User Approves
+            UI->>SM: commit_match(txn: 127, ledger: 45, user_approved: true)
+            SM-->>UI: {committed: true}
+        else User Overrides
+            UI->>SM: commit_match(txn: 127, ledger: 52, override: true, reason: "...")
+            SM-->>UI: {committed: true}
+        else User Modifies Threshold
+            UI->>TIC: recalculate_with_threshold(step: 2, new_threshold: {...})
+            Note right of TIC: Full recalculation triggered<br/>(See Detailed Sub-Diagram)
+            TIC-->>UI: {updated_suggestions: [...]}
+        end
+        
+        %% LEARNING SERVICE UPDATE (WITH FIELD EFFECTIVENESS TRACKING)
+        UI->>LS: record_user_action({<br/>  txn: 127,<br/>  action: "override",<br/>  chosen_ledger: 52,<br/>  rejected_suggestion: 45,<br/>  reason: "description_match",<br/>  field_comparison: {<br/>    suggestion_45: {<br/>      date_score: 0.9,<br/>      amount_score: 1.0,<br/>      desc_score: 0.7,<br/>      ref_number_score: 0.0 (missing)<br/>    },<br/>    chosen_52: {<br/>      date_score: 0.8,<br/>      amount_score: 1.0,<br/>      desc_score: 0.95,<br/>      ref_number_score: 0.6 (partial)<br/>    }<br/>  }<br/>})
+        
+        LS->>LS: Analyze Pattern<br/>Calculate Weight<br/>(freq + consistency + recency)<br/><br/>+ Analyze Field Effectiveness:<br/>• User chose better desc over ref_number<br/>• Description field weight ↑<br/>• Ref_number weight ↓ (for this payer)
+        
+        alt Weight >= 80 (HIGH Confidence)
+            LS->>ORC: update_ml_model({<br/>  rule: "payer_ABC_date_offset_-2",<br/>  weight: 95,<br/>  auto_apply: true,<br/>  field_preferences: {<br/>    "description": 0.95,  ← User trusts desc more<br/>    "ref_number": 0.6     ← Less reliable for ABC Corp<br/>  }<br/>})
+            ORC-->>LS: {<br/>  model_updated: true,<br/>  adaptive_weights_applied: {<br/>    "MT-02": {desc_weight: 0.35→0.40 for ABC Corp}<br/>  }<br/>}
+            
+        else Weight 40-79 (MEDIUM - Queue for Reuse)
+            LS->>LS: Store as candidate_rule<br/>Wait for more occurrences
+            
+        else Weight < 40 (LOW - Ask User)
+            LS->>UI: ask_clarification({<br/>  question: "Should I apply this pattern?",<br/>  context: {...}<br/>})
+            UI-->>U: 🤔 Learning Question:<br/>"Apply -2 day offset for ABC Corp?"
+            U->>UI: [Create Rule] / [Not Yet] / [Never]
+            UI->>LS: user_response({decision: "create_rule"})
+            LS->>ORC: update_ml_model({rule: "...", weight: 100})
+        end
+        
+        %% RE-ORCHESTRATION
+        LS->>ORC: trigger_reorchestration()
+        ORC->>SM: get_unmatched_transactions()
+        SM-->>ORC: {unmatched_txns: [remaining]}
+        
+        ORC->>MT: Re-run steps with updated ML model
+        MT-->>ORC: {new_suggestions: [...]}
+        
+        ORC->>UI: update_all_suggestions()
+        UI-->>U: 🔄 Updated - New suggestions available
+    end
+
+    %% ═══════════════════════════════════════════════════════════
+    %% PHASE 6: CONVERGENCE LOOP
+    %% ═══════════════════════════════════════════════════════════
+    
+    loop Until 100% Coverage
+        ORC->>SM: get_reconciliation_status()
+        SM-->>ORC: {<br/>  committed: 485,<br/>  pending_review: 12,<br/>  no_match: 3,<br/>  total: 500<br/>}
+        
+        alt Coverage < 100%
+            ORC->>UI: next_review_item()
+            UI-->>U: Transaction #X needs review
+            Note over U,LS: User reviews → Learning loop repeats
+        else Coverage = 100%
+            ORC->>ORC: Exit Loop
+        end
+    end
+
+    %% ═══════════════════════════════════════════════════════════
+    %% PHASE 7: FINAL VALIDATION & REPORT
+    %% ═══════════════════════════════════════════════════════════
+    
+    ORC->>SM: final_validation()
+    SM->>SM: Verify all transactions<br/>accounted for
+    SM-->>ORC: {<br/>  committed: 495,<br/>  manual_classified: 5,<br/>  total: 500,<br/>  coverage: 100%<br/>}
+    
+    ORC->>UI: generate_final_report()
+    UI-->>U: ✅ Reconciliation Complete<br/>━━━━━━━━━━━━━━━━━━━━━━<br/>✅ 495 Matched & Committed<br/>📋 5 Manual Classifications<br/>📊 100% Coverage Achieved
+    
+    U->>UI: Download Report / Export Results
