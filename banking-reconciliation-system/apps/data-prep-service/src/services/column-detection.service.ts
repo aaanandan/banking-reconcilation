@@ -102,7 +102,7 @@ export class ColumnDetectionService {
     patterns: string[],
     fieldName: string,
   ): { index: number; name: string; confidence: number } | null {
-    let bestMatch: { index: number; score: number; name: string } | null = null;
+    let bestMatch: { index: number; score: number; name: string } | null = null as { index: number; score: number; name: string } | null;
 
     headers.forEach((header, index) => {
       const cleanHeader = header.toLowerCase().trim();

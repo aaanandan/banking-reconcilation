@@ -35,7 +35,7 @@ export class AutoMappingService {
 
     // Validate core fields are detected
     if (!coreFields.date || !coreFields.amount || !coreFields.description) {
-      const missing = [];
+      const missing: string[] = [];
       if (!coreFields.date) missing.push('date');
       if (!coreFields.amount) missing.push('amount');
       if (!coreFields.description) missing.push('description');
@@ -102,7 +102,7 @@ export class AutoMappingService {
   ): Promise<Array<{ bankId: string; bankName: string; mapping: ColumnMapping }>> {
     this.logger.log(`Creating auto-mappings for ${bankDetectionResults.length} banks`);
 
-    const mappings = [];
+    const mappings: Array<{ bankId: string; bankName: string; mapping: ColumnMapping }> = [];
 
     for (const bank of bankDetectionResults) {
       try {
