@@ -145,6 +145,33 @@
         "tsConfigPath": "apps/mt-12-high-volume-payer/tsconfig.app.json"
       }
     },
+    "mt-13-standing-orders": {
+      "type": "application",
+      "root": "apps/mt-13-standing-orders",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-13-standing-orders/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-13-standing-orders/tsconfig.app.json"
+      }
+    },
+    "mt-14-unmatched-pool": {
+      "type": "application",
+      "root": "apps/mt-14-unmatched-pool",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-14-unmatched-pool/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-14-unmatched-pool/tsconfig.app.json"
+      }
+    },
+    "mt-15-manual-classification": {
+      "type": "application",
+      "root": "apps/mt-15-manual-classification",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-15-manual-classification/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-15-manual-classification/tsconfig.app.json"
+      }
+    },
     "mt-16-final-validation": {
       "type": "application",
       "root": "apps/mt-16-final-validation",
