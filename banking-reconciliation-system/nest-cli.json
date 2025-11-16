@@ -19,6 +19,15 @@
         "tsConfigPath": "apps/data-prep-service/tsconfig.app.json"
       }
     },
+    "match-orchestrator": {
+      "type": "application",
+      "root": "apps/match-orchestrator",
+      "entryFile": "main",
+      "sourceRoot": "apps/match-orchestrator/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/match-orchestrator/tsconfig.app.json"
+      }
+    },
     "mt-01-exact-match": {
       "type": "application",
       "root": "apps/mt-01-exact-match",
