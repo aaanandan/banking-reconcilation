@@ -10,6 +10,15 @@
   "monorepo": true,
   "root": "apps/banking-reconciliation-system",
   "projects": {
+    "data-prep-service": {
+      "type": "application",
+      "root": "apps/data-prep-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/data-prep-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/data-prep-service/tsconfig.app.json"
+      }
+    },
     "shared": {
       "type": "library",
       "root": "libs/shared",
@@ -19,13 +28,13 @@
         "tsConfigPath": "libs/shared/tsconfig.lib.json"
       }
     },
-    "data-prep-service": {
+    "state-manager-service": {
       "type": "application",
-      "root": "apps/data-prep-service",
+      "root": "apps/state-manager-service",
       "entryFile": "main",
-      "sourceRoot": "apps/data-prep-service/src",
+      "sourceRoot": "apps/state-manager-service/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/data-prep-service/tsconfig.app.json"
+        "tsConfigPath": "apps/state-manager-service/tsconfig.app.json"
       }
     }
   }

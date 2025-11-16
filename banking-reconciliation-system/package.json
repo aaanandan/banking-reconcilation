@@ -9,11 +9,14 @@
     "build": "nest build",
     "build:shared": "nest build shared",
     "build:data-prep": "nest build data-prep-service",
+    "build:state-manager": "nest build state-manager-service",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:data-prep": "nest start data-prep-service",
     "start:data-prep:dev": "nest start data-prep-service --watch",
+    "start:state-manager": "nest start state-manager-service",
+    "start:state-manager:dev": "nest start state-manager-service --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/apps/banking-reconciliation-system/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
@@ -71,7 +74,7 @@
       "json",
       "ts"
     ],
-    "rootDir": "src",
+    "rootDir": ".",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
@@ -79,7 +82,10 @@
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],
-    "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "coverageDirectory": "./coverage",
+    "testEnvironment": "node",
+    "roots": [
+      "<rootDir>/apps/"
+    ]
   }
 }
