@@ -533,4 +533,21 @@ export class QuestionManagerServiceController {
   }> {
     return this.questionService.getQuestionsByReconciliation(reconciliationId);
   }
+
+  /**
+   * STEP 51: ANSWER PROCESSING
+   */
+  @Get('processing/summary')
+  @ApiOperation({ summary: 'Get answer processing summary' })
+  @ApiResponse({
+    status: 200,
+    description: 'Answer processing summary',
+  })
+  async getAnswerProcessingSummary(): Promise<{
+    totalAnswered: number;
+    processedByType: Record<string, number>;
+    lastProcessedAt: Date | null;
+  }> {
+    return this.questionService.getAnswerProcessingSummary();
+  }
 }

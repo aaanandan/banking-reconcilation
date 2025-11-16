@@ -167,7 +167,7 @@ export class QuestionManagerServiceService {
   }
 
   /**
-   * Answer a question
+   * Answer a question (STEP 51: Enhanced with validation and processing)
    */
   async answerQuestion(
     id: string,
@@ -179,10 +179,17 @@ export class QuestionManagerServiceService {
       throw new NotFoundException(`Question with ID '${id}' not found`);
     }
 
+    // Validate answer based on answer type
+    this.validateAnswer(question, dto.answer);
+
     question.answer = dto.answer;
     question.answeredAt = new Date();
 
     const updated = await this.questionRepo.save(question);
+
+    // Post-process the answer (apply learnings)
+    await this.processAnswer(updated);
+
     return this.toQuestionResponse(updated);
   }
 
@@ -631,6 +638,228 @@ export class QuestionManagerServiceService {
     }
 
     return results;
+  }
+
+  /**
+   * STEP 51: Answer Processing and Validation Methods
+   */
+
+  /**
+   * Validate answer based on expected answer type
+   */
+  private validateAnswer(question: LearningQuestion, answer: any): void {
+    const answerType = question.answerType;
+
+    // Type validation
+    if (answerType === 'text') {
+      if (typeof answer !== 'string' || answer.trim().length === 0) {
+        throw new ConflictException(
+          `Expected text answer, received: ${typeof answer}`,
+        );
+      }
+    }
+
+    if (answerType === 'number') {
+      if (typeof answer !== 'number' && isNaN(Number(answer))) {
+        throw new ConflictException(
+          `Expected number answer, received: ${typeof answer}`,
+        );
+      }
+    }
+
+    if (answerType === 'boolean') {
+      if (typeof answer !== 'boolean') {
+        throw new ConflictException(
+          `Expected boolean answer, received: ${typeof answer}`,
+        );
+      }
+    }
+
+    if (answerType === 'choice') {
+      const suggestedAnswers = question.suggestedAnswers || [];
+      if (suggestedAnswers.length > 0 && !suggestedAnswers.includes(answer)) {
+        throw new ConflictException(
+          `Answer must be one of: ${suggestedAnswers.join(', ')}`,
+        );
+      }
+    }
+  }
+
+  /**
+   * Process answer and apply learnings
+   */
+  private async processAnswer(question: LearningQuestion): Promise<void> {
+    const answer = question.answer;
+
+    // Process based on question type
+    switch (question.type) {
+      case 'entity_identity':
+        await this.processEntityIdentityAnswer(question, answer);
+        break;
+
+      case 'entity_relationship':
+        await this.processEntityRelationshipAnswer(question, answer);
+        break;
+
+      case 'field_preference':
+        await this.processFieldPreferenceAnswer(question, answer);
+        break;
+
+      case 'exception_reason':
+        await this.processExceptionReasonAnswer(question, answer);
+        break;
+
+      // Other question types can be logged for future processing
+      default:
+        // No specific processing for other types yet
+        break;
+    }
+  }
+
+  /**
+   * Process entity identity answer
+   */
+  private async processEntityIdentityAnswer(
+    question: LearningQuestion,
+    answer: any,
+  ): Promise<void> {
+    if (!question.relatedEntityId) return;
+
+    const entityId = question.relatedEntityId;
+
+    // If answer is "Yes, it is a known entity", create or update profile
+    if (
+      answer === 'Yes, it is a known entity' ||
+      answer.toString().toLowerCase().includes('known')
+    ) {
+      let profile = await this.entityProfileRepo.findOne({
+        where: { entityId },
+      });
+
+      if (!profile) {
+        // Create new profile
+        profile = this.entityProfileRepo.create({
+          entityId,
+          primaryName: entityId,
+          totalTransactions: 0,
+          successfulMatches: 0,
+          userOverrideRate: 0,
+          confidence: 0.5,
+        });
+
+        await this.entityProfileRepo.save(profile);
+      }
+    }
+  }
+
+  /**
+   * Process entity relationship answer
+   */
+  private async processEntityRelationshipAnswer(
+    question: LearningQuestion,
+    answer: any,
+  ): Promise<void> {
+    if (!question.relatedEntityId) return;
+
+    // If entities are the same (aliases), update profile
+    if (
+      answer === 'Same entity (different names)' ||
+      answer.toString().toLowerCase().includes('same entity')
+    ) {
+      const profile = await this.entityProfileRepo.findOne({
+        where: { entityId: question.relatedEntityId },
+      });
+
+      if (profile && question.context) {
+        // Extract second entity name from context or question
+        const match = question.question.match(/"([^"]+)" and "([^"]+)"/);
+        if (match && match[2]) {
+          const alias = match[2];
+          if (!profile.aliases) {
+            profile.aliases = [];
+          }
+          if (!profile.aliases.includes(alias)) {
+            profile.aliases.push(alias);
+            await this.entityProfileRepo.save(profile);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Process field preference answer
+   */
+  private async processFieldPreferenceAnswer(
+    question: LearningQuestion,
+    answer: any,
+  ): Promise<void> {
+    if (!question.relatedEntityId) return;
+
+    const profile = await this.entityProfileRepo.findOne({
+      where: { entityId: question.relatedEntityId },
+    });
+
+    if (profile) {
+      // Update mostReliableField based on answer
+      const selectedField = answer.toString();
+      profile.mostReliableField = selectedField;
+      await this.entityProfileRepo.save(profile);
+    }
+  }
+
+  /**
+   * Process exception reason answer
+   */
+  private async processExceptionReasonAnswer(
+    question: LearningQuestion,
+    answer: any,
+  ): Promise<void> {
+    // Log exception reasons for audit trail
+    // In a real system, this might update a separate audit log table
+    // or trigger notifications to admins
+    console.log(
+      `Exception recorded for ${question.relatedEntityId}: ${answer}`,
+    );
+  }
+
+  /**
+   * Get answer processing summary
+   */
+  async getAnswerProcessingSummary(): Promise<{
+    totalAnswered: number;
+    processedByType: Record<QuestionType, number>;
+    lastProcessedAt: Date | null;
+  }> {
+    const answered = await this.questionRepo.find({
+      where: { answeredAt: Not(IsNull()) },
+    });
+
+    const processedByType: Record<QuestionType, number> = {
+      [QuestionType.ENTITY_IDENTITY]: 0,
+      [QuestionType.ENTITY_RELATIONSHIP]: 0,
+      [QuestionType.BUSINESS_PATTERN]: 0,
+      [QuestionType.VALUE_PATTERN]: 0,
+      [QuestionType.TIMING_PATTERN]: 0,
+      [QuestionType.FIELD_PREFERENCE]: 0,
+      [QuestionType.EXCEPTION_REASON]: 0,
+      [QuestionType.GENERAL_CONTEXT]: 0,
+    };
+
+    let lastProcessedAt: Date | null = null;
+
+    for (const q of answered) {
+      processedByType[q.type as QuestionType]++;
+      if (q.answeredAt && (!lastProcessedAt || q.answeredAt > lastProcessedAt)) {
+        lastProcessedAt = q.answeredAt;
+      }
+    }
+
+    return {
+      totalAnswered: answered.length,
+      processedByType,
+      lastProcessedAt,
+    };
   }
 
   /**
