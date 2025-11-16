@@ -1,6 +1,7 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Post, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Mt02NearExactService } from './mt-02-near-exact.service';
+import { FuzzyMatchRequestDto, FuzzyMatchResponseDto } from './dto/fuzzy-match.dto';
 
 @ApiTags('Matching')
 @Controller('match')
@@ -20,5 +21,11 @@ export class Mt02NearExactController {
     };
   }
 
-  // Fuzzy matching endpoints will be added in Steps 28-30
+  @Post('fuzzy')
+  @ApiOperation({ summary: 'Find fuzzy matches between bank and ledger transactions' })
+  @ApiResponse({ status: 200, description: 'Fuzzy match candidates returned', type: FuzzyMatchResponseDto })
+  @ApiResponse({ status: 400, description: 'Invalid request payload' })
+  findFuzzyMatches(@Body() request: FuzzyMatchRequestDto): FuzzyMatchResponseDto {
+    return this.mt02NearExactService.findFuzzyMatches(request);
+  }
 }
