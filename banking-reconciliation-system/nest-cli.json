@@ -91,6 +91,15 @@
         "tsConfigPath": "apps/mt-06-consolidated-deposits/tsconfig.app.json"
       }
     },
+    "mt-09-timing-differences": {
+      "type": "application",
+      "root": "apps/mt-09-timing-differences",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-09-timing-differences/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-09-timing-differences/tsconfig.app.json"
+      }
+    },
     "question-manager-service": {
       "type": "application",
       "root": "apps/question-manager-service",
