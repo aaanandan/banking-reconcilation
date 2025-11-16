@@ -64,6 +64,15 @@
         "tsConfigPath": "apps/mt-03-bank-fees/tsconfig.app.json"
       }
     },
+    "mt-04-interest": {
+      "type": "application",
+      "root": "apps/mt-04-interest",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-04-interest/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-04-interest/tsconfig.app.json"
+      }
+    },
     "question-manager-service": {
       "type": "application",
       "root": "apps/question-manager-service",
