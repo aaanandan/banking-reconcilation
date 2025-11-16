@@ -40,6 +40,15 @@ export class MatchCandidateDto {
 
   @ApiProperty({ description: 'Algorithm used', example: 'MT-01' })
   algorithm: string;
+
+  // ═══════════════════════════════════════════════════════════
+  // MULTI-BANK SUPPORT (Step 24)
+  // ═══════════════════════════════════════════════════════════
+  @ApiProperty({ description: 'Bank identifier (bank_1, bank_2, etc.)', required: false })
+  bankId?: string;
+
+  @ApiProperty({ description: 'Bank name (HDFC, ICICI, SBI, etc.)', required: false })
+  bankName?: string;
 }
 
 /**
