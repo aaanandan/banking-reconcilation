@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { StateManagerServiceService } from './state-manager-service.service';
+import { TransactionDto } from '@app/shared';
 import {
   CreateReconciliationDto,
   CreateReconciliationResponseDto,
@@ -8,6 +9,11 @@ import {
   UpdateReconciliationDto,
   UpdateReconciliationResponseDto,
 } from './dto/reconciliation.dto';
+import {
+  BulkStoreTransactionsDto,
+  BulkStoreTransactionsResponseDto,
+  QueryTransactionsDto,
+} from './dto/transaction.dto';
 
 @ApiTags('State Management')
 @Controller('state')
@@ -90,5 +96,41 @@ export class StateManagerServiceController {
     @Param('id') id: string,
   ): Promise<{ success: boolean }> {
     return this.stateManagerService.deleteReconciliation(id);
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // TRANSACTION BULK STORAGE ENDPOINTS (Step 18)
+  // ═══════════════════════════════════════════════════════════
+
+  @Post('transactions/bulk')
+  @ApiOperation({ summary: 'Store normalized transactions in bulk (bank + ledger)' })
+  @ApiResponse({
+    status: 201,
+    description: 'Transactions stored successfully',
+    type: BulkStoreTransactionsResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'Reconciliation not found' })
+  @ApiResponse({ status: 400, description: 'Invalid transaction data' })
+  async bulkStoreTransactions(
+    @Body() bulkDto: BulkStoreTransactionsDto,
+  ): Promise<BulkStoreTransactionsResponseDto> {
+    return this.stateManagerService.bulkStoreTransactions(bulkDto);
+  }
+
+  @Get('transactions')
+  @ApiOperation({ summary: 'Query transactions by various filters' })
+  @ApiQuery({ name: 'reconciliationId', required: true, description: 'Reconciliation ID' })
+  @ApiQuery({ name: 'source', required: false, enum: ['bank', 'ledger'], description: 'Filter by source' })
+  @ApiQuery({ name: 'bankId', required: false, description: 'Filter by bank ID (multi-bank support)' })
+  @ApiQuery({ name: 'status', required: false, enum: ['unmatched', 'staged', 'committed', 'manual'], description: 'Filter by status' })
+  @ApiResponse({
+    status: 200,
+    description: 'Transactions retrieved successfully',
+    type: [TransactionDto],
+  })
+  async queryTransactions(
+    @Query() query: QueryTransactionsDto,
+  ): Promise<TransactionDto[]> {
+    return this.stateManagerService.queryTransactions(query);
   }
 }

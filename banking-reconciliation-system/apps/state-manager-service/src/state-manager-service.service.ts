@@ -7,12 +7,17 @@ import {
   LedgerFile,
   Transaction,
   MatchCandidate,
+  TransactionDto,
 } from '@app/shared';
 import {
   CreateReconciliationDto,
   ReconciliationStateDto,
   UpdateReconciliationDto,
 } from './dto/reconciliation.dto';
+import {
+  BulkStoreTransactionsDto,
+  QueryTransactionsDto,
+} from './dto/transaction.dto';
 
 /**
  * State Manager Service
@@ -202,6 +207,104 @@ export class StateManagerServiceService {
   }
 
   // ═══════════════════════════════════════════════════════════
+  // TRANSACTION BULK STORAGE OPERATIONS (Step 18)
+  // ═══════════════════════════════════════════════════════════
+
+  /**
+   * Store normalized transactions in bulk
+   * POST /state/transactions/bulk
+   */
+  async bulkStoreTransactions(dto: BulkStoreTransactionsDto): Promise<{ inserted: number; transactionIds: number[] }> {
+    // Verify reconciliation exists
+    const reconciliation = await this.reconciliationRepo.findOne({
+      where: { id: dto.reconciliationId },
+    });
+
+    if (!reconciliation) {
+      throw new NotFoundException(`Reconciliation with ID ${dto.reconciliationId} not found`);
+    }
+
+    // Convert TransactionDto array to Transaction entities
+    const transactionEntities: Transaction[] = dto.transactions.map(txnDto => {
+      const entity = this.transactionRepo.create({
+        reconciliationId: dto.reconciliationId,
+        source: txnDto.source,
+        bankId: txnDto.bankId || null,
+        bankName: txnDto.bankName || null,
+        date: new Date(txnDto.date),
+        amount: txnDto.amount,
+        description: txnDto.description,
+        optional: txnDto.optional || null,
+        metadata: txnDto.metadata || null,
+        status: 'unmatched',
+        matchedToId: null,
+      });
+
+      return entity;
+    });
+
+    // Bulk save transactions
+    const savedTransactions = await this.transactionRepo.save(transactionEntities);
+
+    // Update reconciliation statistics
+    const totalCount = await this.transactionRepo.count({
+      where: { reconciliationId: dto.reconciliationId },
+    });
+
+    const unmatchedCount = await this.transactionRepo.count({
+      where: {
+        reconciliationId: dto.reconciliationId,
+        status: 'unmatched',
+      },
+    });
+
+    await this.reconciliationRepo.update(dto.reconciliationId, {
+      totalTransactions: totalCount,
+      unmatchedCount: unmatchedCount,
+    });
+
+    return {
+      inserted: savedTransactions.length,
+      transactionIds: savedTransactions.map(t => t.id),
+    };
+  }
+
+  /**
+   * Query transactions with filters
+   * GET /state/transactions?reconciliationId=xxx&source=bank&bankId=bank_1&status=unmatched
+   */
+  async queryTransactions(query: QueryTransactionsDto): Promise<TransactionDto[]> {
+    // Build where clause
+    const whereClause: any = {
+      reconciliationId: query.reconciliationId,
+    };
+
+    if (query.source) {
+      whereClause.source = query.source;
+    }
+
+    if (query.bankId) {
+      whereClause.bankId = query.bankId;
+    }
+
+    if (query.status) {
+      whereClause.status = query.status;
+    }
+
+    // Execute query
+    const transactions = await this.transactionRepo.find({
+      where: whereClause,
+      order: {
+        date: 'ASC',
+        id: 'ASC',
+      },
+    });
+
+    // Map entities to DTOs
+    return transactions.map(t => this.mapToTransactionDto(t));
+  }
+
+  // ═══════════════════════════════════════════════════════════
   // HELPER METHODS
   // ═══════════════════════════════════════════════════════════
 
@@ -257,6 +360,26 @@ export class StateManagerServiceService {
       convergenceRate: Number(reconciliation.convergenceRate),
       createdAt: reconciliation.createdAt,
       updatedAt: reconciliation.updatedAt,
+    };
+  }
+
+  /**
+   * Map Transaction entity to TransactionDto
+   */
+  private mapToTransactionDto(transaction: Transaction): TransactionDto {
+    return {
+      id: transaction.id,
+      source: transaction.source as 'bank' | 'ledger',
+      bankId: transaction.bankId,
+      bankName: transaction.bankName,
+      date: transaction.date.toISOString().split('T')[0],
+      amount: Number(transaction.amount),
+      description: transaction.description,
+      optional: transaction.optional,
+      metadata: transaction.metadata,
+      status: transaction.status as 'unmatched' | 'staged' | 'committed' | 'manual',
+      matchedToId: transaction.matchedToId,
+      reconciliationId: transaction.reconciliationId,
     };
   }
 }
