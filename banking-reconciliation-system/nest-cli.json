@@ -100,6 +100,15 @@
         "tsConfigPath": "apps/mt-09-timing-differences/tsconfig.app.json"
       }
     },
+    "mt-16-final-validation": {
+      "type": "application",
+      "root": "apps/mt-16-final-validation",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-16-final-validation/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-16-final-validation/tsconfig.app.json"
+      }
+    },
     "question-manager-service": {
       "type": "application",
       "root": "apps/question-manager-service",
