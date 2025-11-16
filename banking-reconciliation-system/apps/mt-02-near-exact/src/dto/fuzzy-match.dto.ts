@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsNumber, IsOptional, IsString, Max, Min, ValidateNested } from 'class-validator';
+import { IsArray, IsNumber, IsOptional, IsString, Max, Min, ValidateNested, IsObject } from 'class-validator';
 import { Type } from 'class-transformer';
 import { TransactionDto } from '@app/shared';
 
@@ -77,6 +77,13 @@ export class FuzzyMatchRequestDto {
   @ValidateNested()
   @Type(() => FuzzyThresholdsDto)
   thresholds?: FuzzyThresholdsDto;
+
+  @ApiPropertyOptional({
+    description: 'Optional field profile for per-bank field quality/availability analysis',
+  })
+  @IsOptional()
+  @IsObject()
+  fieldProfile?: any;
 }
 
 /**

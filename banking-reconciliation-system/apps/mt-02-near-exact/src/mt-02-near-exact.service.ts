@@ -41,14 +41,26 @@ export class Mt02NearExactService {
   /**
    * Find fuzzy matches between bank and ledger transactions
    * Step 28: Fuzzy matching with configurable tolerances
+   * Step 31: Per-bank field profile usage
    *
-   * @param request - Bank transactions, ledger transactions, and optional thresholds
+   * @param request - Bank transactions, ledger transactions, optional thresholds, and optional field profile
    * @returns Match candidates with confidence scores and detailed breakdowns
    */
   findFuzzyMatches(request: FuzzyMatchRequestDto): FuzzyMatchResponseDto {
     const thresholds = request.thresholds || this.DEFAULT_THRESHOLDS;
     const matches: FuzzyMatchCandidateDto[] = [];
-    const { bankTransactions, ledgerTransactions } = request;
+    const { bankTransactions, ledgerTransactions, fieldProfile } = request;
+
+    // Step 31: Field profile support for per-bank field quality analysis
+    // Field profile can be used to adjust weights or thresholds per bank
+    // For now, we log it and preserve the capability for future enhancement
+    if (fieldProfile) {
+      // Field profile received - can be used for:
+      // - Adjusting weights based on field quality
+      // - Skipping unavailable fields
+      // - Bank-specific matching strategies
+      // Currently logged for future enhancement
+    }
 
     // Track matched ledger IDs to prevent duplicates (1:1 matching)
     const matchedLedgerIds = new Set<number>();

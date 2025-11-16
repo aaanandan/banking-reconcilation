@@ -133,4 +133,47 @@ export class StateManagerServiceController {
   ): Promise<TransactionDto[]> {
     return this.stateManagerService.queryTransactions(query);
   }
+
+  // ═══════════════════════════════════════════════════════════
+  // STATE SNAPSHOT ENDPOINTS (Step 19)
+  // ═══════════════════════════════════════════════════════════
+
+  @Post('reconciliation/:id/snapshot')
+  @ApiOperation({ summary: 'Save a snapshot of current reconciliation state' })
+  @ApiResponse({
+    status: 201,
+    description: 'Snapshot saved successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Reconciliation not found' })
+  async saveSnapshot(
+    @Param('id') id: string,
+    @Body() dto: { snapshotName?: string; notes?: string },
+  ) {
+    return this.stateManagerService.saveSnapshot(id, dto.snapshotName, dto.notes);
+  }
+
+  @Post('reconciliation/:id/snapshot/:snapshotId/resume')
+  @ApiOperation({ summary: 'Resume reconciliation from a saved snapshot' })
+  @ApiResponse({
+    status: 200,
+    description: 'Reconciliation resumed from snapshot',
+  })
+  @ApiResponse({ status: 404, description: 'Reconciliation or snapshot not found' })
+  async resumeFromSnapshot(
+    @Param('id') id: string,
+    @Param('snapshotId') snapshotId: string,
+  ) {
+    return this.stateManagerService.resumeFromSnapshot(id, snapshotId);
+  }
+
+  @Get('reconciliation/:id/snapshots')
+  @ApiOperation({ summary: 'List all snapshots for a reconciliation' })
+  @ApiResponse({
+    status: 200,
+    description: 'Snapshots retrieved successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Reconciliation not found' })
+  async listSnapshots(@Param('id') id: string) {
+    return this.stateManagerService.listSnapshots(id);
+  }
 }
