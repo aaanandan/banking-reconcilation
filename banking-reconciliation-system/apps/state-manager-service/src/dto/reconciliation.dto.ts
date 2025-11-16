@@ -219,3 +219,69 @@ export class UpdateReconciliationResponseDto {
   @ApiProperty({ description: 'Success status' })
   success: boolean;
 }
+
+/**
+ * SaveSnapshotDto
+ * DTO for POST /state/reconciliation/:id/snapshot
+ */
+export class SaveSnapshotDto {
+  @ApiPropertyOptional({ description: 'Optional snapshot name/description' })
+  @IsOptional()
+  @IsString()
+  snapshotName?: string;
+
+  @ApiPropertyOptional({ description: 'Optional snapshot notes' })
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
+
+/**
+ * SaveSnapshotResponseDto
+ * Response for saving a snapshot
+ */
+export class SaveSnapshotResponseDto {
+  @ApiProperty({ description: 'Snapshot ID' })
+  snapshotId: string;
+
+  @ApiProperty({ description: 'Reconciliation ID' })
+  reconciliationId: string;
+
+  @ApiProperty({ description: 'Snapshot timestamp' })
+  snapshotTimestamp: Date;
+
+  @ApiProperty({ description: 'Current reconciliation status at snapshot time' })
+  status: string;
+
+  @ApiProperty({ description: 'Current step at snapshot time' })
+  currentStep: string;
+
+  @ApiProperty({ description: 'Total transactions at snapshot time' })
+  totalTransactions: number;
+
+  @ApiProperty({ description: 'Matched count at snapshot time' })
+  matchedCount: number;
+}
+
+/**
+ * ResumeSnapshotResponseDto
+ * Response for resuming from a snapshot
+ */
+export class ResumeSnapshotResponseDto {
+  @ApiProperty({ description: 'Success status' })
+  success: boolean;
+
+  @ApiProperty({ description: 'Reconciliation ID' })
+  reconciliationId: string;
+
+  @ApiProperty({ description: 'Snapshot ID that was resumed from' })
+  snapshotId: string;
+
+  @ApiProperty({ description: 'Restored state summary' })
+  restoredState: {
+    status: string;
+    currentStep: string;
+    totalTransactions: number;
+    matchedCount: number;
+  };
+}

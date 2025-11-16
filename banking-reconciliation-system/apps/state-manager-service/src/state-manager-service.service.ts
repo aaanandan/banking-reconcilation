@@ -382,4 +382,181 @@ export class StateManagerServiceService {
       reconciliationId: transaction.reconciliationId,
     };
   }
+
+  // ═══════════════════════════════════════════════════════════
+  // STATE SNAPSHOT OPERATIONS (Step 19)
+  // ═══════════════════════════════════════════════════════════
+
+  /**
+   * Save a snapshot of the current reconciliation state
+   * Allows pausing and resuming long-running reconciliations
+   * POST /state/reconciliation/:id/snapshot
+   */
+  async saveSnapshot(reconciliationId: string, snapshotName?: string, notes?: string): Promise<{
+    snapshotId: string;
+    reconciliationId: string;
+    snapshotTimestamp: Date;
+    status: string;
+    currentStep: string;
+    totalTransactions: number;
+    matchedCount: number;
+  }> {
+    // Get current reconciliation state
+    const reconciliation = await this.reconciliationRepo.findOne({
+      where: { id: reconciliationId },
+      relations: ['bankFiles', 'ledgerFile'],
+    });
+
+    if (!reconciliation) {
+      throw new NotFoundException(`Reconciliation ${reconciliationId} not found`);
+    }
+
+    // Create snapshot ID
+    const snapshotId = `snapshot_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    const snapshotTimestamp = new Date();
+
+    // Store snapshot in metadata field (in-memory for now, could be separate entity)
+    const currentMetadata = reconciliation.metadata || {};
+    const snapshots = currentMetadata.snapshots || [];
+
+    const snapshot = {
+      snapshotId,
+      snapshotName: snapshotName || `Snapshot ${snapshots.length + 1}`,
+      notes,
+      snapshotTimestamp: snapshotTimestamp.toISOString(),
+      state: {
+        status: reconciliation.status,
+        currentStep: reconciliation.currentStep,
+        completedSteps: reconciliation.completedSteps,
+        totalTransactions: reconciliation.totalTransactions,
+        matchedCount: reconciliation.matchedCount,
+        unmatchedCount: reconciliation.unmatchedCount,
+        manualCount: reconciliation.manualCount,
+        convergenceRate: reconciliation.convergenceRate,
+        fieldProfile: reconciliation.fieldProfile,
+      },
+    };
+
+    snapshots.push(snapshot);
+
+    // Update reconciliation with new snapshot
+    reconciliation.metadata = {
+      ...currentMetadata,
+      snapshots,
+      lastSnapshotId: snapshotId,
+      lastSnapshotTimestamp: snapshotTimestamp.toISOString(),
+    };
+
+    await this.reconciliationRepo.save(reconciliation);
+
+    return {
+      snapshotId,
+      reconciliationId,
+      snapshotTimestamp,
+      status: reconciliation.status,
+      currentStep: reconciliation.currentStep,
+      totalTransactions: reconciliation.totalTransactions,
+      matchedCount: reconciliation.matchedCount,
+    };
+  }
+
+  /**
+   * Resume reconciliation from a saved snapshot
+   * Restores the reconciliation state to the snapshot point
+   * POST /state/reconciliation/:id/snapshot/:snapshotId/resume
+   */
+  async resumeFromSnapshot(reconciliationId: string, snapshotId: string): Promise<{
+    success: boolean;
+    reconciliationId: string;
+    snapshotId: string;
+    restoredState: {
+      status: string;
+      currentStep: string;
+      totalTransactions: number;
+      matchedCount: number;
+    };
+  }> {
+    // Get reconciliation
+    const reconciliation = await this.reconciliationRepo.findOne({
+      where: { id: reconciliationId },
+    });
+
+    if (!reconciliation) {
+      throw new NotFoundException(`Reconciliation ${reconciliationId} not found`);
+    }
+
+    // Find snapshot in metadata
+    const metadata = reconciliation.metadata || {};
+    const snapshots = metadata.snapshots || [];
+
+    const snapshot = snapshots.find((s: any) => s.snapshotId === snapshotId);
+
+    if (!snapshot) {
+      throw new NotFoundException(`Snapshot ${snapshotId} not found for reconciliation ${reconciliationId}`);
+    }
+
+    // Restore state from snapshot
+    const restoredState = snapshot.state;
+
+    reconciliation.status = restoredState.status;
+    reconciliation.currentStep = restoredState.currentStep;
+    reconciliation.completedSteps = restoredState.completedSteps;
+    reconciliation.totalTransactions = restoredState.totalTransactions;
+    reconciliation.matchedCount = restoredState.matchedCount;
+    reconciliation.unmatchedCount = restoredState.unmatchedCount;
+    reconciliation.manualCount = restoredState.manualCount;
+    reconciliation.convergenceRate = restoredState.convergenceRate;
+    reconciliation.fieldProfile = restoredState.fieldProfile;
+
+    // Update metadata to track that this was resumed from snapshot
+    reconciliation.metadata = {
+      ...metadata,
+      resumedFromSnapshotId: snapshotId,
+      resumedTimestamp: new Date().toISOString(),
+    };
+
+    await this.reconciliationRepo.save(reconciliation);
+
+    return {
+      success: true,
+      reconciliationId,
+      snapshotId,
+      restoredState: {
+        status: reconciliation.status,
+        currentStep: reconciliation.currentStep,
+        totalTransactions: reconciliation.totalTransactions,
+        matchedCount: reconciliation.matchedCount,
+      },
+    };
+  }
+
+  /**
+   * List all snapshots for a reconciliation
+   * GET /state/reconciliation/:id/snapshots
+   */
+  async listSnapshots(reconciliationId: string): Promise<any[]> {
+    const reconciliation = await this.reconciliationRepo.findOne({
+      where: { id: reconciliationId },
+    });
+
+    if (!reconciliation) {
+      throw new NotFoundException(`Reconciliation ${reconciliationId} not found`);
+    }
+
+    const metadata = reconciliation.metadata || {};
+    const snapshots = metadata.snapshots || [];
+
+    return snapshots.map((snapshot: any) => ({
+      snapshotId: snapshot.snapshotId,
+      snapshotName: snapshot.snapshotName,
+      notes: snapshot.notes,
+      snapshotTimestamp: snapshot.snapshotTimestamp,
+      state: {
+        status: snapshot.state.status,
+        currentStep: snapshot.state.currentStep,
+        totalTransactions: snapshot.state.totalTransactions,
+        matchedCount: snapshot.state.matchedCount,
+      },
+    }));
+  }
 }
