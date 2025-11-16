@@ -28,6 +28,15 @@
         "tsConfigPath": "apps/mt-01-exact-match/tsconfig.app.json"
       }
     },
+    "mt-02-near-exact": {
+      "type": "application",
+      "root": "apps/mt-02-near-exact",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-02-near-exact/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-02-near-exact/tsconfig.app.json"
+      }
+    },
     "shared": {
       "type": "library",
       "root": "libs/shared",
