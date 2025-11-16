@@ -136,6 +136,15 @@
         "tsConfigPath": "apps/mt-11-rounding/tsconfig.app.json"
       }
     },
+    "mt-12-high-volume-payer": {
+      "type": "application",
+      "root": "apps/mt-12-high-volume-payer",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-12-high-volume-payer/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-12-high-volume-payer/tsconfig.app.json"
+      }
+    },
     "mt-16-final-validation": {
       "type": "application",
       "root": "apps/mt-16-final-validation",
