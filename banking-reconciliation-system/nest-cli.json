@@ -19,6 +19,15 @@
         "tsConfigPath": "apps/data-prep-service/tsconfig.app.json"
       }
     },
+    "mt-01-exact-match": {
+      "type": "application",
+      "root": "apps/mt-01-exact-match",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-01-exact-match/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-01-exact-match/tsconfig.app.json"
+      }
+    },
     "shared": {
       "type": "library",
       "root": "libs/shared",
