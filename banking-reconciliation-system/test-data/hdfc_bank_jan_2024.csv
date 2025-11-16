@@ -1,0 +1,8 @@
+Date,Amount,Description,Transaction Type,Reference Number
+15/01/2024,5000.00,Office Rent Payment,Debit,REF001
+16/01/2024,1200.50,Software License Fee,Debit,REF002
+17/01/2024,750.00,Internet Bill Payment,Debit,REF003
+18/01/2024,25000.00,Client Payment Received,Credit,REF004
+20/01/2024,3500.00,Equipment Purchase,Debit,REF005
+22/01/2024,450.00,Office Supplies,Debit,REF006
+25/01/2024,12000.00,Consulting Payment,Credit,REF007
