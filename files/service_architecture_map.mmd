@@ -1,0 +1,159 @@
+graph TB
+    subgraph "User Layer"
+        U[👤 User]
+        UI[UI Service<br/>━━━━━━━━━━<br/>• Presents results<br/>• Captures decisions<br/>• Real-time updates]
+    end
+
+    subgraph "Data Layer"
+        DP[Data Prep Service<br/>━━━━━━━━━━<br/>• Validate files<br/>• Clean & normalize<br/>• Map fields]
+        SM[State Manager Service<br/>━━━━━━━━━━<br/>• Track transaction states<br/>• Store thresholds<br/>• Manage committed matches<br/>• Audit trail]
+    end
+
+    subgraph "Orchestration Layer"
+        ORC[Orchestrator Service<br/>🧠 ML-Driven<br/>━━━━━━━━━━<br/>• Determine step sequence<br/>• Load ML model<br/>• Coordinate execution<br/>• Will evolve to HRL]
+        TIC[Threshold Impact Calculator<br/>━━━━━━━━━━<br/>• Heavy pre-calculation<br/>• Cross-step analysis<br/>• Alternative path discovery<br/>• Cascade impact analysis]
+    end
+
+    subgraph "Matching Engine Layer - 16 Microservices"
+        MT1[MT-01<br/>Exact Match]
+        MT2[MT-02<br/>Near-Exact]
+        MT3[MT-03<br/>Bank Fees]
+        MT5[MT-05<br/>Split Payments]
+        MT7[MT-07<br/>Duplicates]
+        MT8[MT-08<br/>Reversals]
+        MT9[MT-09<br/>Timing Diff]
+        MT12[MT-12<br/>High-Vol Payer]
+        MT16[MT-16<br/>Final Validation]
+        MTX[... MT-04, 06,<br/>10, 11, 13-15 ...]
+    end
+
+    subgraph "Intelligence Layer"
+        LS[Learning Service<br/>━━━━━━━━━━<br/>• Analyze user actions<br/>• Calculate pattern weights<br/>• Store fingerprints<br/>• Ask clarifying questions<br/>• Update orchestrator ML]
+    end
+
+    subgraph "Safety Layer"
+        SR[Safety Service<br/>━━━━━━━━━━<br/>• High-value checks<br/>• High-volume validation<br/>• Threshold safety limits<br/>• Prevent risky auto-commits]
+    end
+
+    %% ═══════════════════════════════════════════════════════════
+    %% PRIMARY DATA FLOW
+    %% ═══════════════════════════════════════════════════════════
+    
+    U -->|Upload files| UI
+    UI -->|Validate & prepare| DP
+    DP -->|Store cleaned data| SM
+    DP -->|Ready signal| UI
+    
+    UI -->|Start reconciliation| ORC
+    ORC <-->|Get/update state| SM
+    
+    ORC -->|Invoke step services| MT1
+    ORC -->|Invoke step services| MT2
+    ORC -->|Invoke step services| MT3
+    ORC -->|Invoke step services| MT5
+    ORC -->|Invoke step services| MT7
+    ORC -->|Invoke step services| MT8
+    ORC -->|Invoke step services| MT9
+    ORC -->|Invoke step services| MT12
+    ORC -->|Invoke step services| MT16
+    ORC -->|Invoke step services| MTX
+    
+    MT1 -->|Return candidates| ORC
+    MT2 -->|Return candidates| ORC
+    MT3 -->|Return candidates| ORC
+    MT5 -->|Return candidates| ORC
+    MT7 -->|Return candidates| ORC
+    MT8 -->|Return candidates| ORC
+    MT9 -->|Return candidates| ORC
+    MT12 -->|Return candidates| ORC
+    MT16 -->|Return candidates| ORC
+    MTX -->|Return candidates| ORC
+    
+    ORC -->|Validate matches| SR
+    SR -->|Safety check results| ORC
+    
+    ORC -->|Commit safe matches| SM
+    ORC -->|Present suggestions| UI
+    UI -->|Display to user| U
+    
+    %% ═══════════════════════════════════════════════════════════
+    %% THRESHOLD IMPACT CALCULATION FLOW
+    %% ═══════════════════════════════════════════════════════════
+    
+    UI -->|Calculate full impact| TIC
+    TIC -->|Call with current thresholds| MT2
+    TIC -->|Call with current thresholds| MT5
+    TIC -->|Call with current thresholds| MT9
+    TIC -->|Call with modified thresholds| MT2
+    TIC -->|Preview future steps| MT9
+    TIC -->|Preview future steps| MT12
+    
+    MT2 -->|Candidates + confidence| TIC
+    MT5 -->|Candidates + confidence| TIC
+    MT9 -->|Impact analysis| TIC
+    MT12 -->|Impact analysis| TIC
+    
+    TIC -->|Aggregated results| UI
+    
+    %% ═══════════════════════════════════════════════════════════
+    %% USER INTERACTION & LEARNING FLOW
+    %% ═══════════════════════════════════════════════════════════
+    
+    U -->|Approve/Override| UI
+    UI -->|Validate action| SR
+    SR -->|Safety confirmed| UI
+    UI -->|Commit decision| SM
+    
+    UI -->|Record user action| LS
+    LS -->|Analyze pattern| LS
+    LS -->|Calculate weight| LS
+    
+    LS -.->|Weight >= 80:<br/>Update ML model| ORC
+    LS -.->|Weight 40-79:<br/>Queue for reuse| LS
+    LS -.->|Weight < 40:<br/>Ask question| UI
+    
+    UI -.->|User answers| LS
+    LS -.->|Confirmed rule| ORC
+    
+    LS -->|Trigger re-orchestration| ORC
+    ORC -->|Re-run with updated model| MT2
+    ORC -->|Re-run with updated model| MT5
+    ORC -->|Re-run with updated model| MT9
+    
+    %% ═══════════════════════════════════════════════════════════
+    %% THRESHOLD CHANGE & IMMEDIATE RE-RUN FLOW
+    %% ═══════════════════════════════════════════════════════════
+    
+    U -.->|Modify threshold| UI
+    UI -.->|Update threshold| SM
+    UI -.->|Re-run steps 2-5| ORC
+    ORC -.->|Execute with new threshold| MT2
+    MT2 -.->|New matches| ORC
+    ORC -.->|Update suggestions| UI
+    
+    %% ═══════════════════════════════════════════════════════════
+    %% STATE QUERIES
+    %% ═══════════════════════════════════════════════════════════
+    
+    ORC <-.->|Query unmatched txns| SM
+    UI <-.->|Query reconciliation status| SM
+    TIC <-.->|Query current thresholds| SM
+    SR <-.->|Query transaction details| SM
+    
+    %% ═══════════════════════════════════════════════════════════
+    %% STYLING
+    %% ═══════════════════════════════════════════════════════════
+    
+    classDef userLayer fill:#e1f5ff,stroke:#0066cc,stroke-width:2px
+    classDef dataLayer fill:#fff4e1,stroke:#cc8800,stroke-width:2px
+    classDef orchestrationLayer fill:#f0e1ff,stroke:#8800cc,stroke-width:2px
+    classDef matchingLayer fill:#e1ffe1,stroke:#00aa00,stroke-width:2px
+    classDef intelligenceLayer fill:#ffe1e1,stroke:#cc0000,stroke-width:2px
+    classDef safetyLayer fill:#fff0e1,stroke:#ff6600,stroke-width:2px
+    
+    class U,UI userLayer
+    class DP,SM dataLayer
+    class ORC,TIC orchestrationLayer
+    class MT1,MT2,MT3,MT5,MT7,MT8,MT9,MT12,MT16,MTX matchingLayer
+    class LS intelligenceLayer
+    class SR safetyLayer
