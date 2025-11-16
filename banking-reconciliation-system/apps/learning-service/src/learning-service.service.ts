@@ -6,6 +6,8 @@ import {
   LearningQuestion,
   UserFeedback,
   User,
+  Transaction,
+  Reconciliation,
 } from '@app/shared';
 import {
   RecordFeedbackDto,
@@ -23,6 +25,8 @@ import {
   UpdateBankBehaviorDto,
   BankBehaviorResponseDto,
   AllBanksBehaviorResponseDto,
+  BuildProfileFromTransactionsDto,
+  PatternLearningResultDto,
 } from './dto/entity-profile.dto';
 
 /**
@@ -45,6 +49,12 @@ export class LearningServiceService {
 
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+
+    @InjectRepository(Transaction)
+    private readonly transactionRepo: Repository<Transaction>,
+
+    @InjectRepository(Reconciliation)
+    private readonly reconciliationRepo: Repository<Reconciliation>,
   ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -533,7 +543,199 @@ export class LearningServiceService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // FUTURE STEPS (45)
+  // STEP 45: PATTERN LEARNING
   // ═══════════════════════════════════════════════════════════════════════════
-  // - Step 45: Pattern learning
+
+  /**
+   * Build or update entity profile from transaction analysis
+   */
+  async buildProfileFromTransactions(
+    dto: BuildProfileFromTransactionsDto,
+  ): Promise<PatternLearningResultDto> {
+    // Verify reconciliation exists
+    const reconciliation = await this.reconciliationRepo.findOne({
+      where: { id: dto.reconciliationId },
+    });
+
+    if (!reconciliation) {
+      throw new NotFoundException(`Reconciliation '${dto.reconciliationId}' not found`);
+    }
+
+    // Find or create entity profile
+    let profile = await this.entityProfileRepo.findOne({
+      where: { entityId: dto.entityId },
+    });
+
+    const isNewProfile = !profile;
+
+    if (!profile) {
+      // Create new profile
+      if (!dto.entityName) {
+        throw new NotFoundException(
+          `Entity profile '${dto.entityId}' not found and no entityName provided`,
+        );
+      }
+
+      profile = this.entityProfileRepo.create({
+        entityId: dto.entityId,
+        primaryName: dto.entityName,
+        aliases: [],
+        relatedEntities: [],
+        subsidiaries: [],
+        tags: [],
+        totalTransactions: 0,
+        successfulMatches: 0,
+        manualInterventions: 0,
+        userOverrideRate: 0,
+        confidence: 0,
+      });
+    }
+
+    // Fetch all transactions for this entity in this reconciliation
+    // Match by description containing entityId or entityName
+    const transactions = await this.transactionRepo
+      .createQueryBuilder('transaction')
+      .where('transaction.reconciliationId = :reconciliationId', {
+        reconciliationId: dto.reconciliationId,
+      })
+      .andWhere(
+        '(transaction.description ILIKE :entityId OR transaction.description ILIKE :entityName)',
+        {
+          entityId: `%${dto.entityId}%`,
+          entityName: `%${profile.primaryName}%`,
+        },
+      )
+      .getMany();
+
+    if (transactions.length === 0) {
+      throw new NotFoundException(
+        `No transactions found for entity '${dto.entityId}' in reconciliation '${dto.reconciliationId}'`,
+      );
+    }
+
+    // Analyze transactions and learn patterns
+    const patternsLearned = this.analyzeTransactions(transactions);
+
+    // Update profile with learned patterns
+    profile.typicalAmountMin = patternsLearned.amountRange.min;
+    profile.typicalAmountMax = patternsLearned.amountRange.max;
+    profile.typicalAmountMedian = patternsLearned.amountRange.median;
+    profile.frequencyPattern = patternsLearned.frequencyPattern;
+    if (patternsLearned.preferredDayOfMonth !== undefined) {
+      profile.preferredDayOfMonth = patternsLearned.preferredDayOfMonth;
+    }
+
+    // Update transaction counts
+    profile.totalTransactions += transactions.length;
+
+    // Calculate confidence based on number of transactions
+    // More transactions = higher confidence
+    const newConfidence = Math.min(0.95, transactions.length / 100);
+    profile.confidence = Math.round(newConfidence * 100) / 100;
+
+    // Update field reliability scores based on pattern consistency
+    if (patternsLearned.mostReliableFields.length > 0) {
+      if (!profile.fieldReliabilityScores) {
+        profile.fieldReliabilityScores = {};
+      }
+      patternsLearned.mostReliableFields.forEach((field) => {
+        profile.fieldReliabilityScores[field] = 0.9; // High reliability for consistent fields
+      });
+      profile.mostReliableField = patternsLearned.mostReliableFields[0];
+    }
+
+    // Save updated profile
+    const savedProfile = await this.entityProfileRepo.save(profile);
+
+    return {
+      entityId: savedProfile.entityId,
+      transactionsAnalyzed: transactions.length,
+      patternsLearned: {
+        amountRange: patternsLearned.amountRange,
+        frequencyPattern: patternsLearned.frequencyPattern,
+        preferredDayOfMonth: patternsLearned.preferredDayOfMonth,
+        mostReliableFields: patternsLearned.mostReliableFields,
+      },
+      updatedProfile: this.toProfileResponse(savedProfile),
+      newConfidence: savedProfile.confidence,
+      analyzedAt: new Date(),
+    };
+  }
+
+  /**
+   * Analyze transactions to detect patterns
+   */
+  private analyzeTransactions(transactions: Transaction[]) {
+    // Amount analysis
+    const amounts = transactions.map((t) => Math.abs(t.amount)).filter((a) => a > 0);
+    amounts.sort((a, b) => a - b);
+
+    const amountMin = amounts[0] || 0;
+    const amountMax = amounts[amounts.length - 1] || 0;
+    const amountMedian =
+      amounts.length > 0
+        ? amounts[Math.floor(amounts.length / 2)]
+        : 0;
+
+    // Frequency analysis - calculate days between transactions
+    const dates = transactions
+      .map((t) => new Date(t.date))
+      .sort((a, b) => a.getTime() - b.getTime());
+
+    let frequencyPattern = 'unknown';
+    if (dates.length >= 2) {
+      const intervals: number[] = [];
+      for (let i = 1; i < dates.length; i++) {
+        const daysDiff = Math.floor(
+          (dates[i].getTime() - dates[i - 1].getTime()) / (1000 * 60 * 60 * 24),
+        );
+        intervals.push(daysDiff);
+      }
+
+      const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+
+      if (avgInterval < 2) frequencyPattern = 'daily';
+      else if (avgInterval < 8) frequencyPattern = 'weekly';
+      else if (avgInterval < 16) frequencyPattern = 'bi-weekly';
+      else if (avgInterval < 35) frequencyPattern = 'monthly';
+      else if (avgInterval < 95) frequencyPattern = 'quarterly';
+      else frequencyPattern = 'annual';
+    }
+
+    // Preferred day of month
+    const daysOfMonth = dates.map((d) => d.getDate());
+    const dayFrequency: Record<number, number> = {};
+    daysOfMonth.forEach((day) => {
+      dayFrequency[day] = (dayFrequency[day] || 0) + 1;
+    });
+
+    let preferredDayOfMonth: number | undefined;
+    if (Object.keys(dayFrequency).length > 0) {
+      const mostFrequentDay = Object.entries(dayFrequency).reduce((a, b) =>
+        a[1] > b[1] ? a : b,
+      );
+      preferredDayOfMonth = parseInt(mostFrequentDay[0], 10);
+    }
+
+    // Determine most reliable fields (fields that are consistently present)
+    const mostReliableFields: string[] = [];
+    const hasDescription = transactions.every((t) => t.description && t.description.length > 0);
+    const hasReference = transactions.every((t) => t.optional?.refNumber && t.optional.refNumber.length > 0);
+
+    if (hasDescription) mostReliableFields.push('description');
+    if (hasReference) mostReliableFields.push('refNumber');
+    // Amount is always reliable if we have transactions
+    if (amounts.length > 0) mostReliableFields.push('amount');
+
+    return {
+      amountRange: {
+        min: Math.round(amountMin * 100) / 100,
+        max: Math.round(amountMax * 100) / 100,
+        median: Math.round(amountMedian * 100) / 100,
+      },
+      frequencyPattern,
+      preferredDayOfMonth,
+      mostReliableFields,
+    };
+  }
 }

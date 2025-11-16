@@ -15,6 +15,8 @@ import {
   UpdateBankBehaviorDto,
   BankBehaviorResponseDto,
   AllBanksBehaviorResponseDto,
+  BuildProfileFromTransactionsDto,
+  PatternLearningResultDto,
 } from './dto/entity-profile.dto';
 
 @ApiTags('Learning')
@@ -243,5 +245,23 @@ export class LearningServiceController {
     @Param('bankId') bankId: string,
   ): Promise<{ success: boolean }> {
     return this.learningServiceService.deleteBankBehavior(entityId, bankId);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // STEP 45: PATTERN LEARNING ENDPOINTS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Post('profile/build-from-transactions')
+  @ApiOperation({ summary: 'Build or update entity profile from transaction analysis' })
+  @ApiResponse({
+    status: 201,
+    description: 'Profile built/updated successfully from transaction patterns',
+    type: PatternLearningResultDto,
+  })
+  @ApiResponse({ status: 404, description: 'Reconciliation or entity not found' })
+  async buildProfileFromTransactions(
+    @Body() dto: BuildProfileFromTransactionsDto,
+  ): Promise<PatternLearningResultDto> {
+    return this.learningServiceService.buildProfileFromTransactions(dto);
   }
 }

@@ -6,6 +6,8 @@ import {
   LearningQuestion,
   UserFeedback,
   User,
+  Transaction,
+  Reconciliation,
 } from '@app/shared';
 import { LearningServiceController } from './learning-service.controller';
 import { LearningServiceService } from './learning-service.service';
@@ -28,6 +30,8 @@ import { LearningServiceService } from './learning-service.service';
       LearningQuestion,
       UserFeedback,
       User,
+      Transaction,
+      Reconciliation,
     ]),
   ],
   controllers: [LearningServiceController],

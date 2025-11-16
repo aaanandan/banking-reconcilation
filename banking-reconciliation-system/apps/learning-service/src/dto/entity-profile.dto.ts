@@ -243,6 +243,35 @@ export class BuildProfileFromTransactionsDto {
 }
 
 /**
+ * Pattern Learning Result DTO
+ * Results from analyzing transactions and learning patterns
+ */
+export class PatternLearningResultDto {
+  @ApiProperty({ description: 'Entity ID' })
+  entityId: string;
+
+  @ApiProperty({ description: 'Number of transactions analyzed' })
+  transactionsAnalyzed: number;
+
+  @ApiProperty({ description: 'Patterns learned from analysis' })
+  patternsLearned: {
+    amountRange?: { min: number; max: number; median: number };
+    frequencyPattern?: string;
+    preferredDayOfMonth?: number;
+    mostReliableFields?: string[];
+  };
+
+  @ApiProperty({ description: 'Updated profile', type: EntityProfileResponseDto })
+  updatedProfile: EntityProfileResponseDto;
+
+  @ApiProperty({ description: 'Confidence score after learning (0-1)' })
+  newConfidence: number;
+
+  @ApiProperty({ description: 'Analysis timestamp' })
+  analyzedAt: Date;
+}
+
+/**
  * Bank Specific Behavior DTO
  * Per-bank behavior patterns for an entity
  */
