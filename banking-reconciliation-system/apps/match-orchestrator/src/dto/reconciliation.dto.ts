@@ -446,3 +446,88 @@ export class ReconciliationResponseDto {
   })
   workflow: string;
 }
+
+/**
+ * Progress Status Enum
+ * Represents the current state of reconciliation workflow
+ */
+export enum ProgressStatus {
+  PENDING = 'pending',
+  CALLING_MT01 = 'calling_mt01',
+  MT01_COMPLETE = 'mt01_complete',
+  EXTRACTING_UNMATCHED = 'extracting_unmatched',
+  CALLING_MT02 = 'calling_mt02',
+  MT02_COMPLETE = 'mt02_complete',
+  AGGREGATING_RESULTS = 'aggregating_results',
+  COMPLETE = 'complete',
+  ERROR = 'error',
+}
+
+/**
+ * Progress Update DTO
+ * Real-time status update during reconciliation workflow
+ */
+export class ProgressUpdateDto {
+  @ApiProperty({
+    description: 'Unique reconciliation ID',
+    example: 'recon_12345',
+  })
+  reconciliationId: string;
+
+  @ApiProperty({
+    description: 'Current progress status',
+    enum: ProgressStatus,
+    example: ProgressStatus.CALLING_MT01,
+  })
+  status: ProgressStatus;
+
+  @ApiProperty({
+    description: 'Current step number (1-based)',
+    example: 1,
+  })
+  currentStep: number;
+
+  @ApiProperty({
+    description: 'Total number of steps',
+    example: 4,
+  })
+  totalSteps: number;
+
+  @ApiProperty({
+    description: 'Progress percentage (0-100)',
+    example: 25,
+  })
+  progressPercentage: number;
+
+  @ApiProperty({
+    description: 'Human-readable status message',
+    example: 'Calling MT-01 Exact Match service...',
+  })
+  message: string;
+
+  @ApiProperty({
+    description: 'Timestamp of this update',
+    example: '2024-01-15T10:30:00.000Z',
+  })
+  timestamp: string;
+
+  @ApiProperty({
+    description: 'Number of exact matches found (available after MT-01)',
+    required: false,
+    example: 4,
+  })
+  exactMatchesFound?: number;
+
+  @ApiProperty({
+    description: 'Number of fuzzy matches found (available after MT-02)',
+    required: false,
+    example: 5,
+  })
+  fuzzyMatchesFound?: number;
+
+  @ApiProperty({
+    description: 'Error message if status is ERROR',
+    required: false,
+  })
+  error?: string;
+}
