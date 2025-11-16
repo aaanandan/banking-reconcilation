@@ -19,6 +19,15 @@
         "tsConfigPath": "apps/data-prep-service/tsconfig.app.json"
       }
     },
+    "learning-service": {
+      "type": "application",
+      "root": "apps/learning-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/learning-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/learning-service/tsconfig.app.json"
+      }
+    },
     "match-orchestrator": {
       "type": "application",
       "root": "apps/match-orchestrator",
