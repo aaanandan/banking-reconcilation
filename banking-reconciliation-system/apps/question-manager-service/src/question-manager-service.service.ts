@@ -329,6 +329,311 @@ export class QuestionManagerServiceService {
   }
 
   /**
+   * STEP 49: Question Generator Methods
+   */
+
+  /**
+   * Generate an entity identity question
+   */
+  async generateEntityIdentityQuestion(params: {
+    entityName: string;
+    reconciliationId: string;
+    transactionIds: number[];
+    triggeredBy: string;
+    context?: string;
+  }): Promise<QuestionResponseDto> {
+    const questionId = `entity-identity-${params.entityName}-${Date.now()}`;
+
+    const dto: CreateQuestionDto = {
+      questionId,
+      type: QuestionType.ENTITY_IDENTITY,
+      priority: QuestionPriority.HIGH,
+      timing: QuestionTiming.STEP_END,
+      question: `Is "${params.entityName}" a known payer/payee in your organization?`,
+      context:
+        params.context ||
+        `The name "${params.entityName}" appeared in transaction(s) but is not in our system. Please help us identify this entity.`,
+      suggestedAnswers: [
+        'Yes, it is a known entity',
+        'No, it is external',
+        'Not sure, needs research',
+      ],
+      answerType: 'choice' as any,
+      relatedEntityId: params.entityName,
+      relatedTransactionIds: params.transactionIds,
+      relatedReconciliationId: params.reconciliationId,
+      triggeredBy: params.triggeredBy,
+      helpText:
+        'Identifying entities helps improve automatic matching in future reconciliations.',
+      exampleAnswer: 'Yes, it is a known entity',
+    };
+
+    return this.createQuestion(dto);
+  }
+
+  /**
+   * Generate an entity relationship question
+   */
+  async generateEntityRelationshipQuestion(params: {
+    entity1: string;
+    entity2: string;
+    reconciliationId: string;
+    triggeredBy: string;
+  }): Promise<QuestionResponseDto> {
+    const questionId = `entity-relationship-${params.entity1}-${params.entity2}-${Date.now()}`;
+
+    const dto: CreateQuestionDto = {
+      questionId,
+      type: QuestionType.ENTITY_RELATIONSHIP,
+      priority: QuestionPriority.MEDIUM,
+      timing: QuestionTiming.DEFERRED,
+      question: `What is the relationship between "${params.entity1}" and "${params.entity2}"?`,
+      context: `These entities appear together in transactions. Understanding their relationship helps improve matching accuracy.`,
+      suggestedAnswers: [
+        'Parent-subsidiary',
+        'Same entity (different names)',
+        'Partner organizations',
+        'Unrelated',
+      ],
+      answerType: 'choice' as any,
+      relatedEntityId: params.entity1,
+      relatedReconciliationId: params.reconciliationId,
+      triggeredBy: params.triggeredBy,
+      helpText:
+        'Entity relationships help us understand consolidated transactions and aliases.',
+      exampleAnswer: 'Same entity (different names)',
+    };
+
+    return this.createQuestion(dto);
+  }
+
+  /**
+   * Generate a business pattern question
+   */
+  async generateBusinessPatternQuestion(params: {
+    entityId: string;
+    patternObserved: string;
+    reconciliationId: string;
+    triggeredBy: string;
+  }): Promise<QuestionResponseDto> {
+    const questionId = `business-pattern-${params.entityId}-${Date.now()}`;
+
+    const dto: CreateQuestionDto = {
+      questionId,
+      type: QuestionType.BUSINESS_PATTERN,
+      priority: QuestionPriority.LOW,
+      timing: QuestionTiming.SESSION_END,
+      question: `Is the following pattern expected for "${params.entityId}"? ${params.patternObserved}`,
+      context: `We've observed this pattern in recent transactions and want to confirm if it's normal business behavior.`,
+      suggestedAnswers: ['Yes, expected', 'No, unusual', 'Seasonal variation'],
+      answerType: 'choice' as any,
+      relatedEntityId: params.entityId,
+      relatedReconciliationId: params.reconciliationId,
+      triggeredBy: params.triggeredBy,
+      helpText:
+        'Understanding business patterns helps detect anomalies and improve forecasting.',
+      exampleAnswer: 'Yes, expected',
+    };
+
+    return this.createQuestion(dto);
+  }
+
+  /**
+   * Generate a value pattern question
+   */
+  async generateValuePatternQuestion(params: {
+    entityId: string;
+    amount: number;
+    typicalRange: { min: number; max: number };
+    reconciliationId: string;
+    transactionIds: number[];
+    triggeredBy: string;
+  }): Promise<QuestionResponseDto> {
+    const questionId = `value-pattern-${params.entityId}-${Date.now()}`;
+
+    const dto: CreateQuestionDto = {
+      questionId,
+      type: QuestionType.VALUE_PATTERN,
+      priority: QuestionPriority.HIGH,
+      timing: QuestionTiming.IMMEDIATE,
+      question: `Transaction amount $${params.amount} for "${params.entityId}" is outside the typical range ($${params.typicalRange.min}-$${params.typicalRange.max}). Is this correct?`,
+      context: `This amount is significantly different from historical transactions. Please confirm if this is expected or requires investigation.`,
+      suggestedAnswers: ['Correct, expected', 'Error, should be corrected', 'Special case'],
+      answerType: 'choice' as any,
+      relatedEntityId: params.entityId,
+      relatedTransactionIds: params.transactionIds,
+      relatedReconciliationId: params.reconciliationId,
+      triggeredBy: params.triggeredBy,
+      helpText:
+        'Unusual amounts may indicate errors or special circumstances that should be documented.',
+      exampleAnswer: 'Special case',
+    };
+
+    return this.createQuestion(dto);
+  }
+
+  /**
+   * Generate a timing pattern question
+   */
+  async generateTimingPatternQuestion(params: {
+    entityId: string;
+    expectedPattern: string;
+    actualDate: string;
+    reconciliationId: string;
+    triggeredBy: string;
+  }): Promise<QuestionResponseDto> {
+    const questionId = `timing-pattern-${params.entityId}-${Date.now()}`;
+
+    const dto: CreateQuestionDto = {
+      questionId,
+      type: QuestionType.TIMING_PATTERN,
+      priority: QuestionPriority.MEDIUM,
+      timing: QuestionTiming.STEP_END,
+      question: `Transaction from "${params.entityId}" on ${params.actualDate} differs from expected ${params.expectedPattern} pattern. Is this normal?`,
+      context: `Historical data shows transactions typically follow a ${params.expectedPattern} pattern, but this transaction occurred on ${params.actualDate}.`,
+      suggestedAnswers: [
+        'Normal variation',
+        'Holiday/special event',
+        'Error in date',
+        'Pattern has changed',
+      ],
+      answerType: 'choice' as any,
+      relatedEntityId: params.entityId,
+      relatedReconciliationId: params.reconciliationId,
+      triggeredBy: params.triggeredBy,
+      helpText:
+        'Understanding timing variations helps predict cash flow and detect scheduling errors.',
+      exampleAnswer: 'Holiday/special event',
+    };
+
+    return this.createQuestion(dto);
+  }
+
+  /**
+   * Generate a field preference question
+   */
+  async generateFieldPreferenceQuestion(params: {
+    entityId: string;
+    fields: string[];
+    reconciliationId: string;
+    transactionIds: number[];
+    triggeredBy: string;
+  }): Promise<QuestionResponseDto> {
+    const questionId = `field-preference-${params.entityId}-${Date.now()}`;
+
+    const dto: CreateQuestionDto = {
+      questionId,
+      type: QuestionType.FIELD_PREFERENCE,
+      priority: QuestionPriority.MEDIUM,
+      timing: QuestionTiming.STEP_END,
+      question: `Which field is most reliable for identifying "${params.entityId}"? ${params.fields.join(', ')}`,
+      context: `Multiple fields contain identifying information. Knowing which is most reliable improves matching accuracy.`,
+      suggestedAnswers: params.fields,
+      answerType: 'choice' as any,
+      relatedEntityId: params.entityId,
+      relatedTransactionIds: params.transactionIds,
+      relatedReconciliationId: params.reconciliationId,
+      triggeredBy: params.triggeredBy,
+      helpText:
+        'Field preferences help prioritize matching strategies for this entity.',
+      exampleAnswer: params.fields[0],
+    };
+
+    return this.createQuestion(dto);
+  }
+
+  /**
+   * Generate an exception reason question
+   */
+  async generateExceptionReasonQuestion(params: {
+    action: string;
+    entityId: string;
+    reconciliationId: string;
+    transactionIds: number[];
+    triggeredBy: string;
+  }): Promise<QuestionResponseDto> {
+    const questionId = `exception-reason-${params.entityId}-${Date.now()}`;
+
+    const dto: CreateQuestionDto = {
+      questionId,
+      type: QuestionType.EXCEPTION_REASON,
+      priority: QuestionPriority.CRITICAL,
+      timing: QuestionTiming.IMMEDIATE,
+      question: `Why was manual action taken: "${params.action}" for "${params.entityId}"?`,
+      context: `A manual override was applied. Documenting the reason helps improve the system and maintain audit trail.`,
+      suggestedAnswers: [
+        'System error',
+        'Business exception',
+        'Data quality issue',
+        'Policy change',
+      ],
+      answerType: 'text' as any,
+      relatedEntityId: params.entityId,
+      relatedTransactionIds: params.transactionIds,
+      relatedReconciliationId: params.reconciliationId,
+      triggeredBy: params.triggeredBy,
+      helpText:
+        'Exception reasons are important for compliance and system improvement.',
+      exampleAnswer: 'Business exception - one-time special payment terms',
+    };
+
+    return this.createQuestion(dto);
+  }
+
+  /**
+   * Generate a general context question
+   */
+  async generateGeneralContextQuestion(params: {
+    topic: string;
+    question: string;
+    reconciliationId: string;
+    triggeredBy: string;
+    priority?: QuestionPriority;
+    timing?: QuestionTiming;
+  }): Promise<QuestionResponseDto> {
+    const questionId = `general-context-${params.topic}-${Date.now()}`;
+
+    const dto: CreateQuestionDto = {
+      questionId,
+      type: QuestionType.GENERAL_CONTEXT,
+      priority: params.priority || QuestionPriority.LOW,
+      timing: params.timing || QuestionTiming.DEFERRED,
+      question: params.question,
+      context: `Additional context needed to improve reconciliation process.`,
+      suggestedAnswers: [],
+      answerType: 'text' as any,
+      relatedReconciliationId: params.reconciliationId,
+      triggeredBy: params.triggeredBy,
+      helpText: 'Your input helps us better understand your business processes.',
+    };
+
+    return this.createQuestion(dto);
+  }
+
+  /**
+   * Bulk generate questions
+   */
+  async bulkGenerateQuestions(
+    questions: CreateQuestionDto[],
+  ): Promise<QuestionResponseDto[]> {
+    const results: QuestionResponseDto[] = [];
+
+    for (const dto of questions) {
+      try {
+        const created = await this.createQuestion(dto);
+        results.push(created);
+      } catch (error) {
+        // Skip duplicates, continue with others
+        if (!(error instanceof ConflictException)) {
+          throw error;
+        }
+      }
+    }
+
+    return results;
+  }
+
+  /**
    * Convert LearningQuestion entity to QuestionResponseDto
    */
   private toQuestionResponse(question: LearningQuestion): QuestionResponseDto {

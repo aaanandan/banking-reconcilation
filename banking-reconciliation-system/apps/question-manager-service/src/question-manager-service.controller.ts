@@ -203,4 +203,180 @@ export class QuestionManagerServiceController {
   ): Promise<QuestionResponseDto> {
     return this.questionService.getQuestionByQuestionId(questionId);
   }
+
+  /**
+   * STEP 49: QUESTION GENERATORS
+   */
+  @Post('generate/entity-identity')
+  @ApiOperation({ summary: 'Generate an entity identity question' })
+  @ApiResponse({
+    status: 201,
+    description: 'Question generated successfully',
+    type: QuestionResponseDto,
+  })
+  async generateEntityIdentityQuestion(
+    @Body()
+    params: {
+      entityName: string;
+      reconciliationId: string;
+      transactionIds: number[];
+      triggeredBy: string;
+      context?: string;
+    },
+  ): Promise<QuestionResponseDto> {
+    return this.questionService.generateEntityIdentityQuestion(params);
+  }
+
+  @Post('generate/entity-relationship')
+  @ApiOperation({ summary: 'Generate an entity relationship question' })
+  @ApiResponse({
+    status: 201,
+    description: 'Question generated successfully',
+    type: QuestionResponseDto,
+  })
+  async generateEntityRelationshipQuestion(
+    @Body()
+    params: {
+      entity1: string;
+      entity2: string;
+      reconciliationId: string;
+      triggeredBy: string;
+    },
+  ): Promise<QuestionResponseDto> {
+    return this.questionService.generateEntityRelationshipQuestion(params);
+  }
+
+  @Post('generate/business-pattern')
+  @ApiOperation({ summary: 'Generate a business pattern question' })
+  @ApiResponse({
+    status: 201,
+    description: 'Question generated successfully',
+    type: QuestionResponseDto,
+  })
+  async generateBusinessPatternQuestion(
+    @Body()
+    params: {
+      entityId: string;
+      patternObserved: string;
+      reconciliationId: string;
+      triggeredBy: string;
+    },
+  ): Promise<QuestionResponseDto> {
+    return this.questionService.generateBusinessPatternQuestion(params);
+  }
+
+  @Post('generate/value-pattern')
+  @ApiOperation({ summary: 'Generate a value pattern question' })
+  @ApiResponse({
+    status: 201,
+    description: 'Question generated successfully',
+    type: QuestionResponseDto,
+  })
+  async generateValuePatternQuestion(
+    @Body()
+    params: {
+      entityId: string;
+      amount: number;
+      typicalRange: { min: number; max: number };
+      reconciliationId: string;
+      transactionIds: number[];
+      triggeredBy: string;
+    },
+  ): Promise<QuestionResponseDto> {
+    return this.questionService.generateValuePatternQuestion(params);
+  }
+
+  @Post('generate/timing-pattern')
+  @ApiOperation({ summary: 'Generate a timing pattern question' })
+  @ApiResponse({
+    status: 201,
+    description: 'Question generated successfully',
+    type: QuestionResponseDto,
+  })
+  async generateTimingPatternQuestion(
+    @Body()
+    params: {
+      entityId: string;
+      expectedPattern: string;
+      actualDate: string;
+      reconciliationId: string;
+      triggeredBy: string;
+    },
+  ): Promise<QuestionResponseDto> {
+    return this.questionService.generateTimingPatternQuestion(params);
+  }
+
+  @Post('generate/field-preference')
+  @ApiOperation({ summary: 'Generate a field preference question' })
+  @ApiResponse({
+    status: 201,
+    description: 'Question generated successfully',
+    type: QuestionResponseDto,
+  })
+  async generateFieldPreferenceQuestion(
+    @Body()
+    params: {
+      entityId: string;
+      fields: string[];
+      reconciliationId: string;
+      transactionIds: number[];
+      triggeredBy: string;
+    },
+  ): Promise<QuestionResponseDto> {
+    return this.questionService.generateFieldPreferenceQuestion(params);
+  }
+
+  @Post('generate/exception-reason')
+  @ApiOperation({ summary: 'Generate an exception reason question' })
+  @ApiResponse({
+    status: 201,
+    description: 'Question generated successfully',
+    type: QuestionResponseDto,
+  })
+  async generateExceptionReasonQuestion(
+    @Body()
+    params: {
+      action: string;
+      entityId: string;
+      reconciliationId: string;
+      transactionIds: number[];
+      triggeredBy: string;
+    },
+  ): Promise<QuestionResponseDto> {
+    return this.questionService.generateExceptionReasonQuestion(params);
+  }
+
+  @Post('generate/general-context')
+  @ApiOperation({ summary: 'Generate a general context question' })
+  @ApiResponse({
+    status: 201,
+    description: 'Question generated successfully',
+    type: QuestionResponseDto,
+  })
+  async generateGeneralContextQuestion(
+    @Body()
+    params: {
+      topic: string;
+      question: string;
+      reconciliationId: string;
+      triggeredBy: string;
+      priority?: string;
+      timing?: string;
+    },
+  ): Promise<QuestionResponseDto> {
+    return this.questionService.generateGeneralContextQuestion(params as any);
+  }
+
+  @Post('generate/bulk')
+  @ApiOperation({ summary: 'Bulk generate multiple questions' })
+  @ApiResponse({
+    status: 201,
+    description: 'Questions generated successfully',
+    type: [QuestionResponseDto],
+  })
+  async bulkGenerateQuestions(
+    @Body() questions: CreateQuestionDto[],
+  ): Promise<QuestionResponseDto[]> {
+    return this.questionService.bulkGenerateQuestions(questions);
+  }
 }
