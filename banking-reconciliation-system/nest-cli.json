@@ -55,6 +55,15 @@
         "tsConfigPath": "apps/mt-02-near-exact/tsconfig.app.json"
       }
     },
+    "question-manager-service": {
+      "type": "application",
+      "root": "apps/question-manager-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/question-manager-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/question-manager-service/tsconfig.app.json"
+      }
+    },
     "shared": {
       "type": "library",
       "root": "libs/shared",
