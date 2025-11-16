@@ -634,6 +634,299 @@ export class QuestionManagerServiceService {
   }
 
   /**
+   * STEP 50: Advanced Queue Management Methods
+   */
+
+  /**
+   * Bulk answer multiple questions
+   */
+  async bulkAnswerQuestions(
+    answers: Array<{ id: string; answer: any }>,
+  ): Promise<QuestionResponseDto[]> {
+    const results: QuestionResponseDto[] = [];
+
+    for (const item of answers) {
+      try {
+        const updated = await this.answerQuestion(item.id, {
+          answer: item.answer,
+        });
+        results.push(updated);
+      } catch (error) {
+        // Skip not found, continue with others
+        if (!(error instanceof NotFoundException)) {
+          throw error;
+        }
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Bulk delete multiple questions
+   */
+  async bulkDeleteQuestions(ids: string[]): Promise<{ deleted: number }> {
+    let deleted = 0;
+
+    for (const id of ids) {
+      try {
+        await this.deleteQuestion(id);
+        deleted++;
+      } catch (error) {
+        // Skip not found, continue with others
+        if (!(error instanceof NotFoundException)) {
+          throw error;
+        }
+      }
+    }
+
+    return { deleted };
+  }
+
+  /**
+   * Bulk update question priority
+   */
+  async bulkUpdatePriority(
+    ids: string[],
+    priority: QuestionPriority,
+  ): Promise<QuestionResponseDto[]> {
+    const results: QuestionResponseDto[] = [];
+
+    for (const id of ids) {
+      const question = await this.questionRepo.findOne({ where: { id } });
+      if (question) {
+        question.priority = priority;
+        const updated = await this.questionRepo.save(question);
+        results.push(this.toQuestionResponse(updated));
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Bulk update question timing
+   */
+  async bulkUpdateTiming(
+    ids: string[],
+    timing: QuestionTiming,
+  ): Promise<QuestionResponseDto[]> {
+    const results: QuestionResponseDto[] = [];
+
+    for (const id of ids) {
+      const question = await this.questionRepo.findOne({ where: { id } });
+      if (question) {
+        question.timing = timing;
+        const updated = await this.questionRepo.save(question);
+        results.push(this.toQuestionResponse(updated));
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Clear answered questions (archive or delete)
+   */
+  async clearAnsweredQuestions(
+    beforeDate?: Date,
+  ): Promise<{ cleared: number }> {
+    const queryBuilder = this.questionRepo.createQueryBuilder('question');
+    queryBuilder.where('question.answeredAt IS NOT NULL');
+
+    if (beforeDate) {
+      queryBuilder.andWhere('question.answeredAt < :beforeDate', {
+        beforeDate,
+      });
+    }
+
+    const questions = await queryBuilder.getMany();
+    await this.questionRepo.remove(questions);
+
+    return { cleared: questions.length };
+  }
+
+  /**
+   * Expire questions by criteria
+   */
+  async expireQuestions(params: {
+    olderThanDays?: number;
+    timing?: QuestionTiming;
+    type?: QuestionType;
+  }): Promise<{ expired: number }> {
+    const queryBuilder = this.questionRepo.createQueryBuilder('question');
+    queryBuilder.where('question.answeredAt IS NULL');
+
+    if (params.olderThanDays) {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - params.olderThanDays);
+      queryBuilder.andWhere('question.createdAt < :cutoffDate', { cutoffDate });
+    }
+
+    if (params.timing) {
+      queryBuilder.andWhere('question.timing = :timing', {
+        timing: params.timing,
+      });
+    }
+
+    if (params.type) {
+      queryBuilder.andWhere('question.type = :type', { type: params.type });
+    }
+
+    const questions = await queryBuilder.getMany();
+
+    // Set expiration date to now for these questions
+    const now = new Date();
+    for (const question of questions) {
+      question.expiresAt = now;
+    }
+
+    await this.questionRepo.save(questions);
+
+    return { expired: questions.length };
+  }
+
+  /**
+   * Get queue metrics
+   */
+  async getQueueMetrics(): Promise<{
+    totalUnanswered: number;
+    byPriority: Record<QuestionPriority, number>;
+    byTiming: Record<QuestionTiming, number>;
+    avgTimeToAnswer: number; // in hours
+    oldestUnanswered: Date | null;
+    newestUnanswered: Date | null;
+  }> {
+    const unanswered = await this.questionRepo.find({
+      where: { answeredAt: IsNull() },
+    });
+
+    const byPriority: Record<QuestionPriority, number> = {
+      [QuestionPriority.CRITICAL]: 0,
+      [QuestionPriority.HIGH]: 0,
+      [QuestionPriority.MEDIUM]: 0,
+      [QuestionPriority.LOW]: 0,
+    };
+
+    const byTiming: Record<QuestionTiming, number> = {
+      [QuestionTiming.IMMEDIATE]: 0,
+      [QuestionTiming.STEP_END]: 0,
+      [QuestionTiming.SESSION_END]: 0,
+      [QuestionTiming.DEFERRED]: 0,
+    };
+
+    for (const q of unanswered) {
+      byPriority[q.priority as QuestionPriority]++;
+      byTiming[q.timing as QuestionTiming]++;
+    }
+
+    // Calculate average time to answer for answered questions
+    const answered = await this.questionRepo.find({
+      where: { answeredAt: Not(IsNull()) },
+    });
+
+    let totalTimeToAnswer = 0;
+    for (const q of answered) {
+      if (q.answeredAt) {
+        const diff = q.answeredAt.getTime() - q.createdAt.getTime();
+        totalTimeToAnswer += diff;
+      }
+    }
+
+    const avgTimeToAnswer =
+      answered.length > 0
+        ? totalTimeToAnswer / answered.length / (1000 * 60 * 60)
+        : 0; // in hours
+
+    // Find oldest and newest unanswered
+    const oldestUnanswered =
+      unanswered.length > 0
+        ? unanswered.reduce((oldest, q) =>
+            q.createdAt < oldest.createdAt ? q : oldest,
+          ).createdAt
+        : null;
+
+    const newestUnanswered =
+      unanswered.length > 0
+        ? unanswered.reduce((newest, q) =>
+            q.createdAt > newest.createdAt ? q : newest,
+          ).createdAt
+        : null;
+
+    return {
+      totalUnanswered: unanswered.length,
+      byPriority,
+      byTiming,
+      avgTimeToAnswer: Math.round(avgTimeToAnswer * 100) / 100,
+      oldestUnanswered,
+      newestUnanswered,
+    };
+  }
+
+  /**
+   * Reorder queue based on updated priorities
+   */
+  async reorderQueue(): Promise<QuestionResponseDto[]> {
+    const unanswered = await this.questionRepo.find({
+      where: { answeredAt: IsNull() },
+      order: {
+        priority: 'DESC',
+        createdAt: 'ASC',
+      },
+    });
+
+    return unanswered.map((q) => this.toQuestionResponse(q));
+  }
+
+  /**
+   * Get questions requiring immediate attention
+   */
+  async getImmediateAttentionQuestions(): Promise<QuestionResponseDto[]> {
+    const questions = await this.questionRepo.find({
+      where: [
+        { timing: QuestionTiming.IMMEDIATE, answeredAt: IsNull() },
+        { priority: QuestionPriority.CRITICAL, answeredAt: IsNull() },
+      ],
+      order: {
+        priority: 'DESC',
+        createdAt: 'ASC',
+      },
+    });
+
+    return questions.map((q) => this.toQuestionResponse(q));
+  }
+
+  /**
+   * Get questions by reconciliation with queue status
+   */
+  async getQuestionsByReconciliation(
+    reconciliationId: string,
+  ): Promise<{
+    total: number;
+    answered: number;
+    unanswered: number;
+    questions: QuestionResponseDto[];
+  }> {
+    const questions = await this.questionRepo.find({
+      where: { relatedReconciliationId: reconciliationId },
+      order: {
+        priority: 'DESC',
+        createdAt: 'ASC',
+      },
+    });
+
+    const answered = questions.filter((q) => q.answeredAt !== null).length;
+    const unanswered = questions.filter((q) => q.answeredAt === null).length;
+
+    return {
+      total: questions.length,
+      answered,
+      unanswered,
+      questions: questions.map((q) => this.toQuestionResponse(q)),
+    };
+  }
+
+  /**
    * Convert LearningQuestion entity to QuestionResponseDto
    */
   private toQuestionResponse(question: LearningQuestion): QuestionResponseDto {

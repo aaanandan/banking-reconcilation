@@ -379,4 +379,158 @@ export class QuestionManagerServiceController {
   ): Promise<QuestionResponseDto[]> {
     return this.questionService.bulkGenerateQuestions(questions);
   }
+
+  /**
+   * STEP 50: ADVANCED QUEUE MANAGEMENT
+   */
+  @Put('bulk/answer')
+  @ApiOperation({ summary: 'Bulk answer multiple questions' })
+  @ApiResponse({
+    status: 200,
+    description: 'Questions answered successfully',
+    type: [QuestionResponseDto],
+  })
+  async bulkAnswerQuestions(
+    @Body() answers: Array<{ id: string; answer: any }>,
+  ): Promise<QuestionResponseDto[]> {
+    return this.questionService.bulkAnswerQuestions(answers);
+  }
+
+  @Delete('bulk/delete')
+  @ApiOperation({ summary: 'Bulk delete multiple questions' })
+  @ApiResponse({
+    status: 200,
+    description: 'Questions deleted successfully',
+  })
+  async bulkDeleteQuestions(
+    @Body() body: { ids: string[] },
+  ): Promise<{ deleted: number }> {
+    return this.questionService.bulkDeleteQuestions(body.ids);
+  }
+
+  @Put('bulk/priority')
+  @ApiOperation({ summary: 'Bulk update question priority' })
+  @ApiResponse({
+    status: 200,
+    description: 'Priorities updated successfully',
+    type: [QuestionResponseDto],
+  })
+  async bulkUpdatePriority(
+    @Body() body: { ids: string[]; priority: string },
+  ): Promise<QuestionResponseDto[]> {
+    return this.questionService.bulkUpdatePriority(
+      body.ids,
+      body.priority as any,
+    );
+  }
+
+  @Put('bulk/timing')
+  @ApiOperation({ summary: 'Bulk update question timing' })
+  @ApiResponse({
+    status: 200,
+    description: 'Timing updated successfully',
+    type: [QuestionResponseDto],
+  })
+  async bulkUpdateTiming(
+    @Body() body: { ids: string[]; timing: string },
+  ): Promise<QuestionResponseDto[]> {
+    return this.questionService.bulkUpdateTiming(body.ids, body.timing as any);
+  }
+
+  @Delete('answered/clear')
+  @ApiOperation({ summary: 'Clear answered questions' })
+  @ApiQuery({
+    name: 'beforeDate',
+    required: false,
+    description: 'Clear questions answered before this date',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Answered questions cleared',
+  })
+  async clearAnsweredQuestions(
+    @Query('beforeDate') beforeDate?: string,
+  ): Promise<{ cleared: number }> {
+    const date = beforeDate ? new Date(beforeDate) : undefined;
+    return this.questionService.clearAnsweredQuestions(date);
+  }
+
+  @Post('expire')
+  @ApiOperation({ summary: 'Expire questions by criteria' })
+  @ApiResponse({
+    status: 200,
+    description: 'Questions expired',
+  })
+  async expireQuestions(
+    @Body()
+    params: {
+      olderThanDays?: number;
+      timing?: string;
+      type?: string;
+    },
+  ): Promise<{ expired: number }> {
+    return this.questionService.expireQuestions(params as any);
+  }
+
+  @Get('queue/metrics')
+  @ApiOperation({ summary: 'Get queue metrics' })
+  @ApiResponse({
+    status: 200,
+    description: 'Queue metrics',
+  })
+  async getQueueMetrics(): Promise<{
+    totalUnanswered: number;
+    byPriority: Record<string, number>;
+    byTiming: Record<string, number>;
+    avgTimeToAnswer: number;
+    oldestUnanswered: Date | null;
+    newestUnanswered: Date | null;
+  }> {
+    return this.questionService.getQueueMetrics();
+  }
+
+  @Get('queue/reorder')
+  @ApiOperation({ summary: 'Reorder queue based on priorities' })
+  @ApiResponse({
+    status: 200,
+    description: 'Reordered queue',
+    type: [QuestionResponseDto],
+  })
+  async reorderQueue(): Promise<QuestionResponseDto[]> {
+    return this.questionService.reorderQueue();
+  }
+
+  @Get('queue/immediate-attention')
+  @ApiOperation({
+    summary: 'Get questions requiring immediate attention',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Immediate attention questions',
+    type: [QuestionResponseDto],
+  })
+  async getImmediateAttentionQuestions(): Promise<QuestionResponseDto[]> {
+    return this.questionService.getImmediateAttentionQuestions();
+  }
+
+  @Get('reconciliation/:reconciliationId')
+  @ApiOperation({ summary: 'Get questions by reconciliation ID' })
+  @ApiParam({
+    name: 'reconciliationId',
+    description: 'Reconciliation ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Questions for reconciliation',
+  })
+  async getQuestionsByReconciliation(
+    @Param('reconciliationId') reconciliationId: string,
+  ): Promise<{
+    total: number;
+    answered: number;
+    unanswered: number;
+    questions: QuestionResponseDto[];
+  }> {
+    return this.questionService.getQuestionsByReconciliation(reconciliationId);
+  }
 }
