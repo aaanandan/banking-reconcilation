@@ -127,6 +127,15 @@
         "tsConfigPath": "apps/mt-10-currency/tsconfig.app.json"
       }
     },
+    "mt-11-rounding": {
+      "type": "application",
+      "root": "apps/mt-11-rounding",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-11-rounding/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-11-rounding/tsconfig.app.json"
+      }
+    },
     "mt-16-final-validation": {
       "type": "application",
       "root": "apps/mt-16-final-validation",
