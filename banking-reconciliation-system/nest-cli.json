@@ -82,6 +82,15 @@
         "tsConfigPath": "apps/mt-05-split-payments/tsconfig.app.json"
       }
     },
+    "mt-06-consolidated-deposits": {
+      "type": "application",
+      "root": "apps/mt-06-consolidated-deposits",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-06-consolidated-deposits/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-06-consolidated-deposits/tsconfig.app.json"
+      }
+    },
     "question-manager-service": {
       "type": "application",
       "root": "apps/question-manager-service",
