@@ -73,6 +73,15 @@
         "tsConfigPath": "apps/mt-04-interest/tsconfig.app.json"
       }
     },
+    "mt-05-split-payments": {
+      "type": "application",
+      "root": "apps/mt-05-split-payments",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-05-split-payments/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-05-split-payments/tsconfig.app.json"
+      }
+    },
     "question-manager-service": {
       "type": "application",
       "root": "apps/question-manager-service",
