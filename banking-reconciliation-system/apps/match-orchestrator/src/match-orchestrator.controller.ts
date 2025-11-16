@@ -1,6 +1,7 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Post, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { MatchOrchestratorService } from './match-orchestrator.service';
+import { ReconciliationRequestDto } from './dto/reconciliation.dto';
 
 @ApiTags('Orchestration')
 @Controller('orchestrate')
@@ -23,5 +24,18 @@ export class MatchOrchestratorController {
         'statistics-calculation',
       ],
     };
+  }
+
+  @Post('reconcile')
+  @ApiOperation({
+    summary: 'Orchestrate sequential reconciliation workflow',
+    description:
+      'Executes MT-01 (exact match) followed by MT-02 (fuzzy match) on remaining unmatched transactions. Returns combined results with comprehensive statistics.',
+  })
+  @ApiResponse({ status: 200, description: 'Reconciliation complete' })
+  @ApiResponse({ status: 400, description: 'Invalid request payload' })
+  @ApiResponse({ status: 500, description: 'Internal server error or service unavailable' })
+  async reconcile(@Body() request: ReconciliationRequestDto): Promise<any> {
+    return this.matchOrchestratorService.orchestrateReconciliation(request);
   }
 }
