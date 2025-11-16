@@ -1,2 +1,11 @@
 // Export all entities
-// Will be populated in Step 5
+export * from './user.entity';
+export * from './reconciliation.entity';
+export * from './bank-file.entity';
+export * from './ledger-file.entity';
+export * from './transaction.entity';
+export * from './match-candidate.entity';
+export * from './entity-profile.entity';
+export * from './learning-question.entity';
+export * from './convergence-metrics.entity';
+export * from './user-feedback.entity';
