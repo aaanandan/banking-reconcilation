@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, Query, Put } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { LearningServiceService } from './learning-service.service';
 import {
@@ -7,6 +7,12 @@ import {
   GetFeedbackDto,
   FeedbackStatsDto,
 } from './dto/feedback.dto';
+import {
+  CreateEntityProfileDto,
+  UpdateEntityProfileDto,
+  EntityProfileResponseDto,
+  EntityProfileStatsDto,
+} from './dto/entity-profile.dto';
 
 @ApiTags('Learning')
 @Controller('learning')
@@ -93,5 +99,83 @@ export class LearningServiceController {
   @ApiResponse({ status: 404, description: 'Feedback not found' })
   async deleteFeedback(@Param('id') id: string): Promise<{ success: boolean }> {
     return this.learningServiceService.deleteFeedback(parseInt(id, 10));
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // STEP 43: ENTITY PROFILE ENDPOINTS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Post('profile')
+  @ApiOperation({ summary: 'Create new entity profile for a payer/payee' })
+  @ApiResponse({
+    status: 201,
+    description: 'Entity profile created successfully',
+    type: EntityProfileResponseDto,
+  })
+  @ApiResponse({ status: 409, description: 'Entity profile already exists' })
+  async createProfile(@Body() dto: CreateEntityProfileDto): Promise<EntityProfileResponseDto> {
+    return this.learningServiceService.createProfile(dto);
+  }
+
+  @Get('profile')
+  @ApiOperation({ summary: 'Get all entity profiles' })
+  @ApiResponse({
+    status: 200,
+    description: 'Entity profiles retrieved',
+    type: [EntityProfileResponseDto],
+  })
+  async getAllProfiles(): Promise<EntityProfileResponseDto[]> {
+    return this.learningServiceService.getAllProfiles();
+  }
+
+  @Get('profile/:entityId')
+  @ApiOperation({ summary: 'Get entity profile by ID' })
+  @ApiParam({ name: 'entityId', description: 'Entity ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Entity profile retrieved',
+    type: EntityProfileResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'Entity profile not found' })
+  async getProfile(@Param('entityId') entityId: string): Promise<EntityProfileResponseDto> {
+    return this.learningServiceService.getProfile(entityId);
+  }
+
+  @Put('profile/:entityId')
+  @ApiOperation({ summary: 'Update entity profile' })
+  @ApiParam({ name: 'entityId', description: 'Entity ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Entity profile updated successfully',
+    type: EntityProfileResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'Entity profile not found' })
+  async updateProfile(
+    @Param('entityId') entityId: string,
+    @Body() dto: UpdateEntityProfileDto,
+  ): Promise<EntityProfileResponseDto> {
+    return this.learningServiceService.updateProfile(entityId, dto);
+  }
+
+  @Delete('profile/:entityId')
+  @ApiOperation({ summary: 'Delete entity profile' })
+  @ApiParam({ name: 'entityId', description: 'Entity ID' })
+  @ApiResponse({ status: 200, description: 'Entity profile deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Entity profile not found' })
+  async deleteProfile(@Param('entityId') entityId: string): Promise<{ success: boolean }> {
+    return this.learningServiceService.deleteProfile(entityId);
+  }
+
+  @Get('profile/:entityId/stats')
+  @ApiOperation({ summary: 'Get entity profile statistics' })
+  @ApiParam({ name: 'entityId', description: 'Entity ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile statistics retrieved',
+    type: EntityProfileStatsDto,
+  })
+  @ApiResponse({ status: 404, description: 'Entity profile not found' })
+  async getProfileStats(@Param('entityId') entityId: string): Promise<EntityProfileStatsDto> {
+    return this.learningServiceService.getProfileStats(entityId);
   }
 }

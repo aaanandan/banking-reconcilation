@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -14,6 +14,12 @@ import {
   FeedbackStatsDto,
   FeedbackType,
 } from './dto/feedback.dto';
+import {
+  CreateEntityProfileDto,
+  UpdateEntityProfileDto,
+  EntityProfileResponseDto,
+  EntityProfileStatsDto,
+} from './dto/entity-profile.dto';
 
 /**
  * Learning Service
@@ -205,9 +211,204 @@ export class LearningServiceService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // FUTURE STEPS (43-45)
+  // STEP 43: ENTITY PROFILE CREATION
   // ═══════════════════════════════════════════════════════════════════════════
-  // - Step 43: Entity profile creation
+
+  /**
+   * Create a new entity profile
+   *
+   * @param dto - Entity profile data
+   * @returns Created profile
+   */
+  async createProfile(dto: CreateEntityProfileDto): Promise<EntityProfileResponseDto> {
+    // Check if profile already exists
+    const existing = await this.entityProfileRepo.findOne({
+      where: { entityId: dto.entityId },
+    });
+
+    if (existing) {
+      throw new ConflictException(`Entity profile for '${dto.entityId}' already exists`);
+    }
+
+    // Create new profile
+    const profile = this.entityProfileRepo.create({
+      entityId: dto.entityId,
+      primaryName: dto.primaryName,
+      aliases: dto.aliases || [],
+      legalName: dto.legalName,
+      industry: dto.industry,
+      location: dto.location,
+      tags: dto.tags || [],
+      relatedEntities: [],
+      subsidiaries: [],
+      totalTransactions: 0,
+      successfulMatches: 0,
+      manualInterventions: 0,
+      userOverrideRate: 0,
+      confidence: 0,
+    });
+
+    const saved = await this.entityProfileRepo.save(profile);
+
+    return this.toProfileResponse(saved);
+  }
+
+  /**
+   * Update an existing entity profile
+   *
+   * @param entityId - Entity ID
+   * @param dto - Update data
+   * @returns Updated profile
+   */
+  async updateProfile(
+    entityId: string,
+    dto: UpdateEntityProfileDto,
+  ): Promise<EntityProfileResponseDto> {
+    const profile = await this.entityProfileRepo.findOne({
+      where: { entityId },
+    });
+
+    if (!profile) {
+      throw new NotFoundException(`Entity profile '${entityId}' not found`);
+    }
+
+    // Update fields
+    if (dto.primaryName) profile.primaryName = dto.primaryName;
+    if (dto.aliases) profile.aliases = dto.aliases;
+    if (dto.legalName !== undefined) profile.legalName = dto.legalName;
+    if (dto.industry !== undefined) profile.industry = dto.industry;
+    if (dto.location !== undefined) profile.location = dto.location;
+    if (dto.tags) profile.tags = dto.tags;
+    if (dto.typicalAmountMin !== undefined) profile.typicalAmountMin = dto.typicalAmountMin;
+    if (dto.typicalAmountMax !== undefined) profile.typicalAmountMax = dto.typicalAmountMax;
+    if (dto.typicalAmountMedian !== undefined) profile.typicalAmountMedian = dto.typicalAmountMedian;
+    if (dto.frequencyPattern !== undefined) profile.frequencyPattern = dto.frequencyPattern;
+    if (dto.preferredDayOfMonth !== undefined) profile.preferredDayOfMonth = dto.preferredDayOfMonth;
+
+    const updated = await this.entityProfileRepo.save(profile);
+
+    return this.toProfileResponse(updated);
+  }
+
+  /**
+   * Get entity profile by entityId
+   *
+   * @param entityId - Entity ID
+   * @returns Entity profile
+   */
+  async getProfile(entityId: string): Promise<EntityProfileResponseDto> {
+    const profile = await this.entityProfileRepo.findOne({
+      where: { entityId },
+    });
+
+    if (!profile) {
+      throw new NotFoundException(`Entity profile '${entityId}' not found`);
+    }
+
+    return this.toProfileResponse(profile);
+  }
+
+  /**
+   * Get all entity profiles
+   *
+   * @returns Array of all profiles
+   */
+  async getAllProfiles(): Promise<EntityProfileResponseDto[]> {
+    const profiles = await this.entityProfileRepo.find({
+      order: { totalTransactions: 'DESC' },
+    });
+
+    return profiles.map(p => this.toProfileResponse(p));
+  }
+
+  /**
+   * Delete entity profile
+   *
+   * @param entityId - Entity ID
+   */
+  async deleteProfile(entityId: string): Promise<{ success: boolean }> {
+    const result = await this.entityProfileRepo.delete({ entityId });
+
+    if (result.affected === 0) {
+      throw new NotFoundException(`Entity profile '${entityId}' not found`);
+    }
+
+    return { success: true };
+  }
+
+  /**
+   * Get profile statistics
+   *
+   * @param entityId - Entity ID
+   * @returns Profile statistics
+   */
+  async getProfileStats(entityId: string): Promise<EntityProfileStatsDto> {
+    const profile = await this.entityProfileRepo.findOne({
+      where: { entityId },
+    });
+
+    if (!profile) {
+      throw new NotFoundException(`Entity profile '${entityId}' not found`);
+    }
+
+    const matchRate =
+      profile.totalTransactions > 0
+        ? profile.successfulMatches / profile.totalTransactions
+        : 0;
+
+    const avgAmount = profile.typicalAmountMedian || 0;
+
+    return {
+      entityId: profile.entityId,
+      entityName: profile.primaryName,
+      totalTransactions: profile.totalTransactions,
+      matchRate: Math.round(matchRate * 100) / 100,
+      overrideRate: profile.userOverrideRate,
+      avgAmount,
+      confidence: profile.confidence,
+      frequencyPattern: profile.frequencyPattern || 'unknown',
+      aliasCount: profile.aliases ? profile.aliases.length : 0,
+    };
+  }
+
+  /**
+   * Helper: Convert entity profile to response DTO
+   */
+  private toProfileResponse(profile: EntityProfile): EntityProfileResponseDto {
+    return {
+      id: profile.id,
+      entityId: profile.entityId,
+      primaryName: profile.primaryName,
+      aliases: profile.aliases,
+      legalName: profile.legalName,
+      relatedEntities: profile.relatedEntities,
+      parentCompany: profile.parentCompany,
+      subsidiaries: profile.subsidiaries,
+      industry: profile.industry,
+      location: profile.location,
+      tags: profile.tags,
+      typicalAmountMin: profile.typicalAmountMin,
+      typicalAmountMax: profile.typicalAmountMax,
+      typicalAmountMedian: profile.typicalAmountMedian,
+      frequencyPattern: profile.frequencyPattern,
+      preferredDayOfMonth: profile.preferredDayOfMonth,
+      seasonality: profile.seasonality,
+      bankSpecificBehavior: profile.bankSpecificBehavior,
+      totalTransactions: profile.totalTransactions,
+      successfulMatches: profile.successfulMatches,
+      manualInterventions: profile.manualInterventions,
+      userOverrideRate: profile.userOverrideRate,
+      mostReliableField: profile.mostReliableField,
+      fieldReliabilityScores: profile.fieldReliabilityScores,
+      confidence: profile.confidence,
+      createdAt: profile.createdAt,
+      lastUpdated: profile.lastUpdated,
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FUTURE STEPS (44-45)
+  // ═══════════════════════════════════════════════════════════════════════════
   // - Step 44: Per-bank behavior tracking
   // - Step 45: Pattern learning
 }
