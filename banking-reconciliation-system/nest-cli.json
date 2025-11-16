@@ -118,6 +118,15 @@
         "tsConfigPath": "apps/mt-09-timing-differences/tsconfig.app.json"
       }
     },
+    "mt-10-currency": {
+      "type": "application",
+      "root": "apps/mt-10-currency",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-10-currency/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-10-currency/tsconfig.app.json"
+      }
+    },
     "mt-16-final-validation": {
       "type": "application",
       "root": "apps/mt-16-final-validation",
