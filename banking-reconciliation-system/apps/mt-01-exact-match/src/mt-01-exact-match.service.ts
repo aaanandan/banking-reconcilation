@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { TransactionDto } from '@app/shared';
+import { MatchCandidateDto, MatchRequestDto, MatchResponseDto } from './dto/match.dto';
 
 /**
  * MT-01 Exact Match Service
@@ -8,7 +9,83 @@ import { TransactionDto } from '@app/shared';
  */
 @Injectable()
 export class Mt01ExactMatchService {
-  // Exact match algorithm will be implemented in Step 23
-  // bankId awareness will be added in Step 24
-  // REST endpoint will be created in Step 25
+  /**
+   * Find exact matches between bank and ledger transactions
+   * Step 23: Exact match algorithm implementation
+   *
+   * Algorithm:
+   * 1. For each bank transaction
+   * 2. Search through all ledger transactions
+   * 3. Match if ALL fields are identical:
+   *    - Date (exact)
+   *    - Amount (exact)
+   *    - Description (case-insensitive, trimmed)
+   * 4. Return match with 100% confidence
+   */
+  findExactMatches(request: MatchRequestDto): MatchResponseDto {
+    const matches: MatchCandidateDto[] = [];
+    const { bankTransactions, ledgerTransactions } = request;
+
+    // Track which ledger transactions have been matched to avoid duplicates
+    const matchedLedgerIds = new Set<number>();
+
+    for (const bankTxn of bankTransactions) {
+      for (const ledgerTxn of ledgerTransactions) {
+        // Skip if ledger transaction already matched
+        if (matchedLedgerIds.has(ledgerTxn.id)) {
+          continue;
+        }
+
+        if (this.isExactMatch(bankTxn, ledgerTxn)) {
+          matches.push({
+            bankTxnId: bankTxn.id,
+            ledgerTxnId: ledgerTxn.id,
+            confidence: 1.0,
+            reasoning: 'Exact match on date, amount, and description',
+            algorithm: 'MT-01',
+          });
+
+          // Mark this ledger transaction as matched (1:1 matching)
+          matchedLedgerIds.add(ledgerTxn.id);
+
+          // Break inner loop - move to next bank transaction
+          break;
+        }
+      }
+    }
+
+    return {
+      matches,
+      totalMatches: matches.length,
+      algorithm: 'MT-01-Exact',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Check if two transactions are an exact match
+   * Private helper method
+   */
+  private isExactMatch(bank: TransactionDto, ledger: TransactionDto): boolean {
+    // Date must match exactly
+    if (bank.date !== ledger.date) {
+      return false;
+    }
+
+    // Amount must match exactly
+    if (bank.amount !== ledger.amount) {
+      return false;
+    }
+
+    // Description must match (case-insensitive, trimmed)
+    const bankDesc = bank.description.toLowerCase().trim();
+    const ledgerDesc = ledger.description.toLowerCase().trim();
+
+    if (bankDesc !== ledgerDesc) {
+      return false;
+    }
+
+    // All criteria met - exact match!
+    return true;
+  }
 }
