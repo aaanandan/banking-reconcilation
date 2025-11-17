@@ -4,3 +4,5 @@ export * from './entities';
 export * from './interfaces';
 export * from './utils';
 export * from './constants';
+export * from './decorators/tenant-context.decorator';
+export * from './middleware/tenant-isolation.middleware';
