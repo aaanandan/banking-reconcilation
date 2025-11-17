@@ -1,11 +1,11 @@
-import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { Login } from './pages/Login/Login';
 import { Register } from './pages/Register/Register';
+import { MainLayout } from './components/Layout/MainLayout';
 
-// Placeholder components (will be replaced in Steps 81-90)
+// Placeholder components (will be replaced in Steps 86-90)
 const Dashboard = () => <div>Dashboard Page</div>;
 const UploadFiles = () => <div>Upload Files Page</div>;
-const MainLayout = () => <div><h1>Main Layout</h1><Outlet /></div>;
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
 
 export const router = createBrowserRouter([
