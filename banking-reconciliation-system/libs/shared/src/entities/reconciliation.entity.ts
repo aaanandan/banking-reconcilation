@@ -45,20 +45,15 @@ export class Reconciliation {
   // ══════════════════════════════════════════════════════════
   // Multi-Bank Support: One-to-Many with BankFile
   // ══════════════════════════════════════════════════════════
-  @OneToMany(() => BankFile, bankFile => bankFile.reconciliation, {
-    cascade: true,
-    eager: true,
-  })
+  @OneToMany(() => BankFile, bankFile => bankFile.reconciliation)
   bankFiles: BankFile[];
 
-  @OneToOne(() => LedgerFile, { cascade: true, eager: true })
-  @JoinColumn()
-  ledgerFile: LedgerFile;
+  // Note: ledgerFile relationship removed - not in database schema
 
   // ══════════════════════════════════════════════════════════
   // Date Range Configuration (Optional Filtering)
   // ══════════════════════════════════════════════════════════
-  @Column({ default: true })
+  @Column({ default: true, name: 'dateRangeIncludeAll' })
   includeAllDates: boolean;
 
   @Column({ type: 'date', nullable: true })
@@ -67,36 +62,19 @@ export class Reconciliation {
   @Column({ type: 'date', nullable: true })
   dateRangeTo: Date;
 
-  @Column({ type: 'jsonb', nullable: true })
-  dateRangeAnalysis: {
-    bankDateRange: {
-      earliest: string;
-      latest: string;
-      totalTransactions: number;
-    };
-    ledgerDateRange: {
-      earliest: string;
-      latest: string;
-      totalTransactions: number;
-    };
-    hasDateMismatch: boolean;
-  };
+  // Note: dateRangeAnalysis removed - not in database schema
 
   // ══════════════════════════════════════════════════════════
   // Status & Progress
   // ══════════════════════════════════════════════════════════
-  @Column({
-    type: 'enum',
-    enum: ['in_progress', 'paused', 'completed'],
-    default: 'in_progress',
-  })
+  @Column({ default: 'created' })
   status: string;
 
-  @Column({ nullable: true })
-  currentStep: string;
+  @Column({ type: 'int', default: 0 })
+  currentStep: number;
 
-  @Column({ type: 'simple-array', default: '' })
-  completedSteps: string[];
+  @Column({ type: 'int', default: 16 })
+  totalSteps: number;
 
   // ══════════════════════════════════════════════════════════
   // Field Profile (stored as JSON)
@@ -109,22 +87,34 @@ export class Reconciliation {
   };
 
   // ══════════════════════════════════════════════════════════
-  // Statistics
+  // Statistics (aligned with database schema)
   // ══════════════════════════════════════════════════════════
   @Column({ default: 0 })
-  totalTransactions: number;
+  totalBankTransactions: number;
+
+  @Column({ default: 0 })
+  totalLedgerTransactions: number;
 
   @Column({ default: 0 })
   matchedCount: number;
 
   @Column({ default: 0 })
-  unmatchedCount: number;
+  unmatchedBankCount: number;
 
   @Column({ default: 0 })
-  manualCount: number;
+  unmatchedLedgerCount: number;
+
+  @Column({ default: 0 })
+  stagedMatchesCount: number;
 
   @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })
   convergenceRate: number;
+
+  @Column({ nullable: true })
+  currentAlgorithm: string;
+
+  @Column({ unique: true })
+  reconciliationId: string;
 
   // ══════════════════════════════════════════════════════════
   // Relationships
