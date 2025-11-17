@@ -15,6 +15,7 @@ import {
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
+import { TenantContext } from '@app/shared';
 import { QuestionManagerServiceService } from './question-manager-service.service';
 import {
   CreateQuestionDto,
@@ -73,9 +74,10 @@ export class QuestionManagerServiceController {
   })
   @ApiResponse({ status: 409, description: 'Question already exists' })
   async createQuestion(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body() dto: CreateQuestionDto,
   ): Promise<QuestionResponseDto> {
-    return this.questionService.createQuestion(dto);
+    return this.questionService.createQuestion(tenantContext, dto);
   }
 
   @Get()
@@ -86,9 +88,10 @@ export class QuestionManagerServiceController {
     type: [QuestionResponseDto],
   })
   async getQuestions(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Query() filters: FilterQuestionsDto,
   ): Promise<QuestionResponseDto[]> {
-    return this.questionService.getQuestions(filters);
+    return this.questionService.getQuestions(tenantContext, filters);
   }
 
   @Get(':id')
@@ -100,8 +103,11 @@ export class QuestionManagerServiceController {
     type: QuestionResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Question not found' })
-  async getQuestionById(@Param('id') id: string): Promise<QuestionResponseDto> {
-    return this.questionService.getQuestionById(id);
+  async getQuestionById(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
+    @Param('id') id: string,
+  ): Promise<QuestionResponseDto> {
+    return this.questionService.getQuestionById(tenantContext, id);
   }
 
   @Put(':id/answer')
@@ -114,10 +120,11 @@ export class QuestionManagerServiceController {
   })
   @ApiResponse({ status: 404, description: 'Question not found' })
   async answerQuestion(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Param('id') id: string,
     @Body() dto: AnswerQuestionDto,
   ): Promise<QuestionResponseDto> {
-    return this.questionService.answerQuestion(id, dto);
+    return this.questionService.answerQuestion(tenantContext, id, dto);
   }
 
   @Delete(':id')
@@ -125,8 +132,11 @@ export class QuestionManagerServiceController {
   @ApiParam({ name: 'id', description: 'Question UUID' })
   @ApiResponse({ status: 200, description: 'Question deleted successfully' })
   @ApiResponse({ status: 404, description: 'Question not found' })
-  async deleteQuestion(@Param('id') id: string): Promise<void> {
-    return this.questionService.deleteQuestion(id);
+  async deleteQuestion(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
+    @Param('id') id: string,
+  ): Promise<void> {
+    return this.questionService.deleteQuestion(tenantContext, id);
   }
 
   /**
@@ -139,8 +149,10 @@ export class QuestionManagerServiceController {
     description: 'Question queue',
     type: QuestionQueueDto,
   })
-  async getQuestionQueue(): Promise<QuestionQueueDto> {
-    return this.questionService.getQuestionQueue();
+  async getQuestionQueue(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
+  ): Promise<QuestionQueueDto> {
+    return this.questionService.getQuestionQueue(tenantContext);
   }
 
   @Get('queue/:timing')
@@ -156,9 +168,10 @@ export class QuestionManagerServiceController {
     type: [QuestionResponseDto],
   })
   async getUnansweredByTiming(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Param('timing') timing: QuestionTiming,
   ): Promise<QuestionResponseDto[]> {
-    return this.questionService.getUnansweredByTiming(timing);
+    return this.questionService.getUnansweredByTiming(tenantContext, timing);
   }
 
   @Get('expired/all')
@@ -168,8 +181,10 @@ export class QuestionManagerServiceController {
     description: 'List of expired questions',
     type: [QuestionResponseDto],
   })
-  async getExpiredQuestions(): Promise<QuestionResponseDto[]> {
-    return this.questionService.getExpiredQuestions();
+  async getExpiredQuestions(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
+  ): Promise<QuestionResponseDto[]> {
+    return this.questionService.getExpiredQuestions(tenantContext);
   }
 
   /**
@@ -182,8 +197,10 @@ export class QuestionManagerServiceController {
     description: 'Question statistics',
     type: QuestionStatsDto,
   })
-  async getQuestionStats(): Promise<QuestionStatsDto> {
-    return this.questionService.getQuestionStats();
+  async getQuestionStats(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
+  ): Promise<QuestionStatsDto> {
+    return this.questionService.getQuestionStats(tenantContext);
   }
 
   /**
@@ -199,9 +216,10 @@ export class QuestionManagerServiceController {
   })
   @ApiResponse({ status: 404, description: 'Question not found' })
   async getQuestionByQuestionId(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Param('questionId') questionId: string,
   ): Promise<QuestionResponseDto> {
-    return this.questionService.getQuestionByQuestionId(questionId);
+    return this.questionService.getQuestionByQuestionId(tenantContext, questionId);
   }
 
   /**
@@ -215,6 +233,7 @@ export class QuestionManagerServiceController {
     type: QuestionResponseDto,
   })
   async generateEntityIdentityQuestion(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body()
     params: {
       entityName: string;
@@ -224,7 +243,7 @@ export class QuestionManagerServiceController {
       context?: string;
     },
   ): Promise<QuestionResponseDto> {
-    return this.questionService.generateEntityIdentityQuestion(params);
+    return this.questionService.generateEntityIdentityQuestion(tenantContext, params);
   }
 
   @Post('generate/entity-relationship')
@@ -235,6 +254,7 @@ export class QuestionManagerServiceController {
     type: QuestionResponseDto,
   })
   async generateEntityRelationshipQuestion(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body()
     params: {
       entity1: string;
@@ -243,7 +263,7 @@ export class QuestionManagerServiceController {
       triggeredBy: string;
     },
   ): Promise<QuestionResponseDto> {
-    return this.questionService.generateEntityRelationshipQuestion(params);
+    return this.questionService.generateEntityRelationshipQuestion(tenantContext, params);
   }
 
   @Post('generate/business-pattern')
@@ -254,6 +274,7 @@ export class QuestionManagerServiceController {
     type: QuestionResponseDto,
   })
   async generateBusinessPatternQuestion(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body()
     params: {
       entityId: string;
@@ -262,7 +283,7 @@ export class QuestionManagerServiceController {
       triggeredBy: string;
     },
   ): Promise<QuestionResponseDto> {
-    return this.questionService.generateBusinessPatternQuestion(params);
+    return this.questionService.generateBusinessPatternQuestion(tenantContext, params);
   }
 
   @Post('generate/value-pattern')
@@ -273,6 +294,7 @@ export class QuestionManagerServiceController {
     type: QuestionResponseDto,
   })
   async generateValuePatternQuestion(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body()
     params: {
       entityId: string;
@@ -283,7 +305,7 @@ export class QuestionManagerServiceController {
       triggeredBy: string;
     },
   ): Promise<QuestionResponseDto> {
-    return this.questionService.generateValuePatternQuestion(params);
+    return this.questionService.generateValuePatternQuestion(tenantContext, params);
   }
 
   @Post('generate/timing-pattern')
@@ -294,6 +316,7 @@ export class QuestionManagerServiceController {
     type: QuestionResponseDto,
   })
   async generateTimingPatternQuestion(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body()
     params: {
       entityId: string;
@@ -303,7 +326,7 @@ export class QuestionManagerServiceController {
       triggeredBy: string;
     },
   ): Promise<QuestionResponseDto> {
-    return this.questionService.generateTimingPatternQuestion(params);
+    return this.questionService.generateTimingPatternQuestion(tenantContext, params);
   }
 
   @Post('generate/field-preference')
@@ -314,6 +337,7 @@ export class QuestionManagerServiceController {
     type: QuestionResponseDto,
   })
   async generateFieldPreferenceQuestion(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body()
     params: {
       entityId: string;
@@ -323,7 +347,7 @@ export class QuestionManagerServiceController {
       triggeredBy: string;
     },
   ): Promise<QuestionResponseDto> {
-    return this.questionService.generateFieldPreferenceQuestion(params);
+    return this.questionService.generateFieldPreferenceQuestion(tenantContext, params);
   }
 
   @Post('generate/exception-reason')
@@ -334,6 +358,7 @@ export class QuestionManagerServiceController {
     type: QuestionResponseDto,
   })
   async generateExceptionReasonQuestion(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body()
     params: {
       action: string;
@@ -343,7 +368,7 @@ export class QuestionManagerServiceController {
       triggeredBy: string;
     },
   ): Promise<QuestionResponseDto> {
-    return this.questionService.generateExceptionReasonQuestion(params);
+    return this.questionService.generateExceptionReasonQuestion(tenantContext, params);
   }
 
   @Post('generate/general-context')
@@ -354,6 +379,7 @@ export class QuestionManagerServiceController {
     type: QuestionResponseDto,
   })
   async generateGeneralContextQuestion(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body()
     params: {
       topic: string;
@@ -364,7 +390,7 @@ export class QuestionManagerServiceController {
       timing?: string;
     },
   ): Promise<QuestionResponseDto> {
-    return this.questionService.generateGeneralContextQuestion(params as any);
+    return this.questionService.generateGeneralContextQuestion(tenantContext, params as any);
   }
 
   @Post('generate/bulk')
@@ -375,9 +401,10 @@ export class QuestionManagerServiceController {
     type: [QuestionResponseDto],
   })
   async bulkGenerateQuestions(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body() questions: CreateQuestionDto[],
   ): Promise<QuestionResponseDto[]> {
-    return this.questionService.bulkGenerateQuestions(questions);
+    return this.questionService.bulkGenerateQuestions(tenantContext, questions);
   }
 
   /**
@@ -391,9 +418,10 @@ export class QuestionManagerServiceController {
     type: [QuestionResponseDto],
   })
   async bulkAnswerQuestions(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body() answers: Array<{ id: string; answer: any }>,
   ): Promise<QuestionResponseDto[]> {
-    return this.questionService.bulkAnswerQuestions(answers);
+    return this.questionService.bulkAnswerQuestions(tenantContext, answers);
   }
 
   @Delete('bulk/delete')
@@ -403,9 +431,10 @@ export class QuestionManagerServiceController {
     description: 'Questions deleted successfully',
   })
   async bulkDeleteQuestions(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body() body: { ids: string[] },
   ): Promise<{ deleted: number }> {
-    return this.questionService.bulkDeleteQuestions(body.ids);
+    return this.questionService.bulkDeleteQuestions(tenantContext, body.ids);
   }
 
   @Put('bulk/priority')
@@ -416,9 +445,11 @@ export class QuestionManagerServiceController {
     type: [QuestionResponseDto],
   })
   async bulkUpdatePriority(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body() body: { ids: string[]; priority: string },
   ): Promise<QuestionResponseDto[]> {
     return this.questionService.bulkUpdatePriority(
+      tenantContext,
       body.ids,
       body.priority as any,
     );
@@ -432,9 +463,10 @@ export class QuestionManagerServiceController {
     type: [QuestionResponseDto],
   })
   async bulkUpdateTiming(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body() body: { ids: string[]; timing: string },
   ): Promise<QuestionResponseDto[]> {
-    return this.questionService.bulkUpdateTiming(body.ids, body.timing as any);
+    return this.questionService.bulkUpdateTiming(tenantContext, body.ids, body.timing as any);
   }
 
   @Delete('answered/clear')
@@ -449,10 +481,11 @@ export class QuestionManagerServiceController {
     description: 'Answered questions cleared',
   })
   async clearAnsweredQuestions(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Query('beforeDate') beforeDate?: string,
   ): Promise<{ cleared: number }> {
     const date = beforeDate ? new Date(beforeDate) : undefined;
-    return this.questionService.clearAnsweredQuestions(date);
+    return this.questionService.clearAnsweredQuestions(tenantContext, date);
   }
 
   @Post('expire')
@@ -462,6 +495,7 @@ export class QuestionManagerServiceController {
     description: 'Questions expired',
   })
   async expireQuestions(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body()
     params: {
       olderThanDays?: number;
@@ -469,7 +503,7 @@ export class QuestionManagerServiceController {
       type?: string;
     },
   ): Promise<{ expired: number }> {
-    return this.questionService.expireQuestions(params as any);
+    return this.questionService.expireQuestions(tenantContext, params as any);
   }
 
   @Get('queue/metrics')
@@ -478,7 +512,9 @@ export class QuestionManagerServiceController {
     status: 200,
     description: 'Queue metrics',
   })
-  async getQueueMetrics(): Promise<{
+  async getQueueMetrics(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
+  ): Promise<{
     totalUnanswered: number;
     byPriority: Record<string, number>;
     byTiming: Record<string, number>;
@@ -486,7 +522,7 @@ export class QuestionManagerServiceController {
     oldestUnanswered: Date | null;
     newestUnanswered: Date | null;
   }> {
-    return this.questionService.getQueueMetrics();
+    return this.questionService.getQueueMetrics(tenantContext);
   }
 
   @Get('queue/reorder')
@@ -496,8 +532,10 @@ export class QuestionManagerServiceController {
     description: 'Reordered queue',
     type: [QuestionResponseDto],
   })
-  async reorderQueue(): Promise<QuestionResponseDto[]> {
-    return this.questionService.reorderQueue();
+  async reorderQueue(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
+  ): Promise<QuestionResponseDto[]> {
+    return this.questionService.reorderQueue(tenantContext);
   }
 
   @Get('queue/immediate-attention')
@@ -509,8 +547,10 @@ export class QuestionManagerServiceController {
     description: 'Immediate attention questions',
     type: [QuestionResponseDto],
   })
-  async getImmediateAttentionQuestions(): Promise<QuestionResponseDto[]> {
-    return this.questionService.getImmediateAttentionQuestions();
+  async getImmediateAttentionQuestions(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
+  ): Promise<QuestionResponseDto[]> {
+    return this.questionService.getImmediateAttentionQuestions(tenantContext);
   }
 
   @Get('reconciliation/:reconciliationId')
@@ -524,6 +564,7 @@ export class QuestionManagerServiceController {
     description: 'Questions for reconciliation',
   })
   async getQuestionsByReconciliation(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Param('reconciliationId') reconciliationId: string,
   ): Promise<{
     total: number;
@@ -531,7 +572,7 @@ export class QuestionManagerServiceController {
     unanswered: number;
     questions: QuestionResponseDto[];
   }> {
-    return this.questionService.getQuestionsByReconciliation(reconciliationId);
+    return this.questionService.getQuestionsByReconciliation(tenantContext, reconciliationId);
   }
 
   /**
@@ -543,11 +584,13 @@ export class QuestionManagerServiceController {
     status: 200,
     description: 'Answer processing summary',
   })
-  async getAnswerProcessingSummary(): Promise<{
+  async getAnswerProcessingSummary(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
+  ): Promise<{
     totalAnswered: number;
     processedByType: Record<string, number>;
     lastProcessedAt: Date | null;
   }> {
-    return this.questionService.getAnswerProcessingSummary();
+    return this.questionService.getAnswerProcessingSummary(tenantContext);
   }
 }

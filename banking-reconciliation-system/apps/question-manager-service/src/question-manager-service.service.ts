@@ -2,10 +2,11 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull, Not, LessThan } from 'typeorm';
-import { LearningQuestion, EntityProfile, User, Reconciliation } from '@app/shared';
+import { LearningQuestion, EntityProfile, User, Reconciliation, TenantAwareRepository } from '@app/shared';
 import {
   CreateQuestionDto,
   AnswerQuestionDto,
@@ -25,6 +26,8 @@ import {
  */
 @Injectable()
 export class QuestionManagerServiceService {
+  private readonly logger = new Logger(QuestionManagerServiceService.name);
+
   constructor(
     @InjectRepository(LearningQuestion)
     private readonly questionRepo: Repository<LearningQuestion>,
@@ -40,10 +43,15 @@ export class QuestionManagerServiceService {
    * Create a new learning question
    */
   async createQuestion(
+    tenantContext: { tenantId: string; userId: string; role: string },
     dto: CreateQuestionDto,
   ): Promise<QuestionResponseDto> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Creating new question: ${dto.questionId}`);
+
+    const questionRepo = new TenantAwareRepository(this.questionRepo, tenantContext.tenantId);
+
     // Check if question with same questionId already exists
-    const existing = await this.questionRepo.findOne({
+    const existing = await questionRepo.findOne({
       where: { questionId: dto.questionId },
     });
 
@@ -69,9 +77,10 @@ export class QuestionManagerServiceService {
       helpText: dto.helpText,
       exampleAnswer: dto.exampleAnswer,
       expiresAt: dto.expiresAt,
+      tenantId: tenantContext.tenantId,
     });
 
-    const saved = await this.questionRepo.save(question);
+    const saved = await questionRepo.save(question);
     return this.toQuestionResponse(saved);
   }
 
@@ -79,9 +88,13 @@ export class QuestionManagerServiceService {
    * Get all questions with optional filters
    */
   async getQuestions(
+    tenantContext: { tenantId: string; userId: string; role: string },
     filters?: FilterQuestionsDto,
   ): Promise<QuestionResponseDto[]> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Getting questions with filters`);
+
     const queryBuilder = this.questionRepo.createQueryBuilder('question');
+    queryBuilder.where('question.tenantId = :tenantId', { tenantId: tenantContext.tenantId });
 
     if (filters) {
       if (filters.type) {
@@ -137,8 +150,14 @@ export class QuestionManagerServiceService {
   /**
    * Get a question by ID
    */
-  async getQuestionById(id: string): Promise<QuestionResponseDto> {
-    const question = await this.questionRepo.findOne({ where: { id } });
+  async getQuestionById(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    id: string,
+  ): Promise<QuestionResponseDto> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Getting question by ID: ${id}`);
+
+    const questionRepo = new TenantAwareRepository(this.questionRepo, tenantContext.tenantId);
+    const question = await questionRepo.findOne({ where: { id } });
 
     if (!question) {
       throw new NotFoundException(`Question with ID '${id}' not found`);
@@ -151,9 +170,13 @@ export class QuestionManagerServiceService {
    * Get a question by questionId
    */
   async getQuestionByQuestionId(
+    tenantContext: { tenantId: string; userId: string; role: string },
     questionId: string,
   ): Promise<QuestionResponseDto> {
-    const question = await this.questionRepo.findOne({
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Getting question by questionId: ${questionId}`);
+
+    const questionRepo = new TenantAwareRepository(this.questionRepo, tenantContext.tenantId);
+    const question = await questionRepo.findOne({
       where: { questionId },
     });
 
@@ -170,10 +193,14 @@ export class QuestionManagerServiceService {
    * Answer a question (STEP 51: Enhanced with validation and processing)
    */
   async answerQuestion(
+    tenantContext: { tenantId: string; userId: string; role: string },
     id: string,
     dto: AnswerQuestionDto,
   ): Promise<QuestionResponseDto> {
-    const question = await this.questionRepo.findOne({ where: { id } });
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Answering question: ${id}`);
+
+    const questionRepo = new TenantAwareRepository(this.questionRepo, tenantContext.tenantId);
+    const question = await questionRepo.findOne({ where: { id } });
 
     if (!question) {
       throw new NotFoundException(`Question with ID '${id}' not found`);
@@ -185,10 +212,10 @@ export class QuestionManagerServiceService {
     question.answer = dto.answer;
     question.answeredAt = new Date();
 
-    const updated = await this.questionRepo.save(question);
+    const updated = await questionRepo.save(question);
 
     // Post-process the answer (apply learnings)
-    await this.processAnswer(updated);
+    await this.processAnswer(tenantContext, updated);
 
     return this.toQuestionResponse(updated);
   }
@@ -196,8 +223,14 @@ export class QuestionManagerServiceService {
   /**
    * Delete a question
    */
-  async deleteQuestion(id: string): Promise<void> {
-    const question = await this.questionRepo.findOne({ where: { id } });
+  async deleteQuestion(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    id: string,
+  ): Promise<void> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Deleting question: ${id}`);
+
+    const questionRepo = new TenantAwareRepository(this.questionRepo, tenantContext.tenantId);
+    const question = await questionRepo.findOne({ where: { id } });
 
     if (!question) {
       throw new NotFoundException(`Question with ID '${id}' not found`);
@@ -209,8 +242,13 @@ export class QuestionManagerServiceService {
   /**
    * Get question statistics
    */
-  async getQuestionStats(): Promise<QuestionStatsDto> {
-    const allQuestions = await this.questionRepo.find();
+  async getQuestionStats(
+    tenantContext: { tenantId: string; userId: string; role: string },
+  ): Promise<QuestionStatsDto> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Getting question statistics`);
+
+    const questionRepo = new TenantAwareRepository(this.questionRepo, tenantContext.tenantId);
+    const allQuestions = await questionRepo.find();
 
     const answered = allQuestions.filter((q) => q.answeredAt !== null).length;
     const unanswered = allQuestions.filter((q) => q.answeredAt === null).length;
@@ -267,8 +305,13 @@ export class QuestionManagerServiceService {
   /**
    * Get question queue organized by timing
    */
-  async getQuestionQueue(): Promise<QuestionQueueDto> {
-    const allUnanswered = await this.questionRepo.find({
+  async getQuestionQueue(
+    tenantContext: { tenantId: string; userId: string; role: string },
+  ): Promise<QuestionQueueDto> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Getting question queue`);
+
+    const questionRepo = new TenantAwareRepository(this.questionRepo, tenantContext.tenantId);
+    const allUnanswered = await questionRepo.find({
       where: { answeredAt: IsNull() },
       order: {
         priority: 'DESC',
@@ -304,9 +347,13 @@ export class QuestionManagerServiceService {
    * Get unanswered questions by timing
    */
   async getUnansweredByTiming(
+    tenantContext: { tenantId: string; userId: string; role: string },
     timing: QuestionTiming,
   ): Promise<QuestionResponseDto[]> {
-    const questions = await this.questionRepo.find({
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Getting unanswered questions by timing: ${timing}`);
+
+    const questionRepo = new TenantAwareRepository(this.questionRepo, tenantContext.tenantId);
+    const questions = await questionRepo.find({
       where: {
         timing,
         answeredAt: IsNull(),
@@ -323,14 +370,18 @@ export class QuestionManagerServiceService {
   /**
    * Mark expired questions
    */
-  async getExpiredQuestions(): Promise<QuestionResponseDto[]> {
+  async getExpiredQuestions(
+    tenantContext: { tenantId: string; userId: string; role: string },
+  ): Promise<QuestionResponseDto[]> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Getting expired questions`);
+
     const now = new Date();
-    const questions = await this.questionRepo.find({
-      where: {
-        expiresAt: LessThan(now),
-        answeredAt: IsNull(),
-      },
-    });
+    const questions = await this.questionRepo
+      .createQueryBuilder('question')
+      .where('question.tenantId = :tenantId', { tenantId: tenantContext.tenantId })
+      .andWhere('question.expiresAt < :now', { now })
+      .andWhere('question.answeredAt IS NULL')
+      .getMany();
 
     return questions.map((q) => this.toQuestionResponse(q));
   }
@@ -342,13 +393,18 @@ export class QuestionManagerServiceService {
   /**
    * Generate an entity identity question
    */
-  async generateEntityIdentityQuestion(params: {
-    entityName: string;
-    reconciliationId: string;
-    transactionIds: number[];
-    triggeredBy: string;
-    context?: string;
-  }): Promise<QuestionResponseDto> {
+  async generateEntityIdentityQuestion(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    params: {
+      entityName: string;
+      reconciliationId: string;
+      transactionIds: number[];
+      triggeredBy: string;
+      context?: string;
+    },
+  ): Promise<QuestionResponseDto> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Generating entity identity question for: ${params.entityName}`);
+
     const questionId = `entity-identity-${params.entityName}-${Date.now()}`;
 
     const dto: CreateQuestionDto = {
@@ -375,18 +431,23 @@ export class QuestionManagerServiceService {
       exampleAnswer: 'Yes, it is a known entity',
     };
 
-    return this.createQuestion(dto);
+    return this.createQuestion(tenantContext, dto);
   }
 
   /**
    * Generate an entity relationship question
    */
-  async generateEntityRelationshipQuestion(params: {
-    entity1: string;
-    entity2: string;
-    reconciliationId: string;
-    triggeredBy: string;
-  }): Promise<QuestionResponseDto> {
+  async generateEntityRelationshipQuestion(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    params: {
+      entity1: string;
+      entity2: string;
+      reconciliationId: string;
+      triggeredBy: string;
+    },
+  ): Promise<QuestionResponseDto> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Generating entity relationship question: ${params.entity1} and ${params.entity2}`);
+
     const questionId = `entity-relationship-${params.entity1}-${params.entity2}-${Date.now()}`;
 
     const dto: CreateQuestionDto = {
@@ -411,18 +472,23 @@ export class QuestionManagerServiceService {
       exampleAnswer: 'Same entity (different names)',
     };
 
-    return this.createQuestion(dto);
+    return this.createQuestion(tenantContext, dto);
   }
 
   /**
    * Generate a business pattern question
    */
-  async generateBusinessPatternQuestion(params: {
-    entityId: string;
-    patternObserved: string;
-    reconciliationId: string;
-    triggeredBy: string;
-  }): Promise<QuestionResponseDto> {
+  async generateBusinessPatternQuestion(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    params: {
+      entityId: string;
+      patternObserved: string;
+      reconciliationId: string;
+      triggeredBy: string;
+    },
+  ): Promise<QuestionResponseDto> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Generating business pattern question for: ${params.entityId}`);
+
     const questionId = `business-pattern-${params.entityId}-${Date.now()}`;
 
     const dto: CreateQuestionDto = {
@@ -442,20 +508,25 @@ export class QuestionManagerServiceService {
       exampleAnswer: 'Yes, expected',
     };
 
-    return this.createQuestion(dto);
+    return this.createQuestion(tenantContext, dto);
   }
 
   /**
    * Generate a value pattern question
    */
-  async generateValuePatternQuestion(params: {
-    entityId: string;
-    amount: number;
-    typicalRange: { min: number; max: number };
-    reconciliationId: string;
-    transactionIds: number[];
-    triggeredBy: string;
-  }): Promise<QuestionResponseDto> {
+  async generateValuePatternQuestion(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    params: {
+      entityId: string;
+      amount: number;
+      typicalRange: { min: number; max: number };
+      reconciliationId: string;
+      transactionIds: number[];
+      triggeredBy: string;
+    },
+  ): Promise<QuestionResponseDto> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Generating value pattern question for: ${params.entityId}`);
+
     const questionId = `value-pattern-${params.entityId}-${Date.now()}`;
 
     const dto: CreateQuestionDto = {
@@ -476,19 +547,24 @@ export class QuestionManagerServiceService {
       exampleAnswer: 'Special case',
     };
 
-    return this.createQuestion(dto);
+    return this.createQuestion(tenantContext, dto);
   }
 
   /**
    * Generate a timing pattern question
    */
-  async generateTimingPatternQuestion(params: {
-    entityId: string;
-    expectedPattern: string;
-    actualDate: string;
-    reconciliationId: string;
-    triggeredBy: string;
-  }): Promise<QuestionResponseDto> {
+  async generateTimingPatternQuestion(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    params: {
+      entityId: string;
+      expectedPattern: string;
+      actualDate: string;
+      reconciliationId: string;
+      triggeredBy: string;
+    },
+  ): Promise<QuestionResponseDto> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Generating timing pattern question for: ${params.entityId}`);
+
     const questionId = `timing-pattern-${params.entityId}-${Date.now()}`;
 
     const dto: CreateQuestionDto = {
@@ -513,19 +589,24 @@ export class QuestionManagerServiceService {
       exampleAnswer: 'Holiday/special event',
     };
 
-    return this.createQuestion(dto);
+    return this.createQuestion(tenantContext, dto);
   }
 
   /**
    * Generate a field preference question
    */
-  async generateFieldPreferenceQuestion(params: {
-    entityId: string;
-    fields: string[];
-    reconciliationId: string;
-    transactionIds: number[];
-    triggeredBy: string;
-  }): Promise<QuestionResponseDto> {
+  async generateFieldPreferenceQuestion(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    params: {
+      entityId: string;
+      fields: string[];
+      reconciliationId: string;
+      transactionIds: number[];
+      triggeredBy: string;
+    },
+  ): Promise<QuestionResponseDto> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Generating field preference question for: ${params.entityId}`);
+
     const questionId = `field-preference-${params.entityId}-${Date.now()}`;
 
     const dto: CreateQuestionDto = {
@@ -546,19 +627,24 @@ export class QuestionManagerServiceService {
       exampleAnswer: params.fields[0],
     };
 
-    return this.createQuestion(dto);
+    return this.createQuestion(tenantContext, dto);
   }
 
   /**
    * Generate an exception reason question
    */
-  async generateExceptionReasonQuestion(params: {
-    action: string;
-    entityId: string;
-    reconciliationId: string;
-    transactionIds: number[];
-    triggeredBy: string;
-  }): Promise<QuestionResponseDto> {
+  async generateExceptionReasonQuestion(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    params: {
+      action: string;
+      entityId: string;
+      reconciliationId: string;
+      transactionIds: number[];
+      triggeredBy: string;
+    },
+  ): Promise<QuestionResponseDto> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Generating exception reason question for: ${params.entityId}`);
+
     const questionId = `exception-reason-${params.entityId}-${Date.now()}`;
 
     const dto: CreateQuestionDto = {
@@ -584,20 +670,25 @@ export class QuestionManagerServiceService {
       exampleAnswer: 'Business exception - one-time special payment terms',
     };
 
-    return this.createQuestion(dto);
+    return this.createQuestion(tenantContext, dto);
   }
 
   /**
    * Generate a general context question
    */
-  async generateGeneralContextQuestion(params: {
-    topic: string;
-    question: string;
-    reconciliationId: string;
-    triggeredBy: string;
-    priority?: QuestionPriority;
-    timing?: QuestionTiming;
-  }): Promise<QuestionResponseDto> {
+  async generateGeneralContextQuestion(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    params: {
+      topic: string;
+      question: string;
+      reconciliationId: string;
+      triggeredBy: string;
+      priority?: QuestionPriority;
+      timing?: QuestionTiming;
+    },
+  ): Promise<QuestionResponseDto> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Generating general context question: ${params.topic}`);
+
     const questionId = `general-context-${params.topic}-${Date.now()}`;
 
     const dto: CreateQuestionDto = {
@@ -614,20 +705,23 @@ export class QuestionManagerServiceService {
       helpText: 'Your input helps us better understand your business processes.',
     };
 
-    return this.createQuestion(dto);
+    return this.createQuestion(tenantContext, dto);
   }
 
   /**
    * Bulk generate questions
    */
   async bulkGenerateQuestions(
+    tenantContext: { tenantId: string; userId: string; role: string },
     questions: CreateQuestionDto[],
   ): Promise<QuestionResponseDto[]> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Bulk generating ${questions.length} questions`);
+
     const results: QuestionResponseDto[] = [];
 
     for (const dto of questions) {
       try {
-        const created = await this.createQuestion(dto);
+        const created = await this.createQuestion(tenantContext, dto);
         results.push(created);
       } catch (error) {
         // Skip duplicates, continue with others
@@ -688,25 +782,28 @@ export class QuestionManagerServiceService {
   /**
    * Process answer and apply learnings
    */
-  private async processAnswer(question: LearningQuestion): Promise<void> {
+  private async processAnswer(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    question: LearningQuestion,
+  ): Promise<void> {
     const answer = question.answer;
 
     // Process based on question type
     switch (question.type) {
       case 'entity_identity':
-        await this.processEntityIdentityAnswer(question, answer);
+        await this.processEntityIdentityAnswer(tenantContext, question, answer);
         break;
 
       case 'entity_relationship':
-        await this.processEntityRelationshipAnswer(question, answer);
+        await this.processEntityRelationshipAnswer(tenantContext, question, answer);
         break;
 
       case 'field_preference':
-        await this.processFieldPreferenceAnswer(question, answer);
+        await this.processFieldPreferenceAnswer(tenantContext, question, answer);
         break;
 
       case 'exception_reason':
-        await this.processExceptionReasonAnswer(question, answer);
+        await this.processExceptionReasonAnswer(tenantContext, question, answer);
         break;
 
       // Other question types can be logged for future processing
@@ -720,19 +817,21 @@ export class QuestionManagerServiceService {
    * Process entity identity answer
    */
   private async processEntityIdentityAnswer(
+    tenantContext: { tenantId: string; userId: string; role: string },
     question: LearningQuestion,
     answer: any,
   ): Promise<void> {
     if (!question.relatedEntityId) return;
 
     const entityId = question.relatedEntityId;
+    const profileRepo = new TenantAwareRepository(this.entityProfileRepo, tenantContext.tenantId);
 
     // If answer is "Yes, it is a known entity", create or update profile
     if (
       answer === 'Yes, it is a known entity' ||
       answer.toString().toLowerCase().includes('known')
     ) {
-      let profile = await this.entityProfileRepo.findOne({
+      let profile = await profileRepo.findOne({
         where: { entityId },
       });
 
@@ -745,9 +844,10 @@ export class QuestionManagerServiceService {
           successfulMatches: 0,
           userOverrideRate: 0,
           confidence: 0.5,
+          tenantId: tenantContext.tenantId,
         });
 
-        await this.entityProfileRepo.save(profile);
+        await profileRepo.save(profile);
       }
     }
   }
@@ -756,17 +856,20 @@ export class QuestionManagerServiceService {
    * Process entity relationship answer
    */
   private async processEntityRelationshipAnswer(
+    tenantContext: { tenantId: string; userId: string; role: string },
     question: LearningQuestion,
     answer: any,
   ): Promise<void> {
     if (!question.relatedEntityId) return;
+
+    const profileRepo = new TenantAwareRepository(this.entityProfileRepo, tenantContext.tenantId);
 
     // If entities are the same (aliases), update profile
     if (
       answer === 'Same entity (different names)' ||
       answer.toString().toLowerCase().includes('same entity')
     ) {
-      const profile = await this.entityProfileRepo.findOne({
+      const profile = await profileRepo.findOne({
         where: { entityId: question.relatedEntityId },
       });
 
@@ -780,7 +883,7 @@ export class QuestionManagerServiceService {
           }
           if (!profile.aliases.includes(alias)) {
             profile.aliases.push(alias);
-            await this.entityProfileRepo.save(profile);
+            await profileRepo.save(profile);
           }
         }
       }
@@ -791,12 +894,14 @@ export class QuestionManagerServiceService {
    * Process field preference answer
    */
   private async processFieldPreferenceAnswer(
+    tenantContext: { tenantId: string; userId: string; role: string },
     question: LearningQuestion,
     answer: any,
   ): Promise<void> {
     if (!question.relatedEntityId) return;
 
-    const profile = await this.entityProfileRepo.findOne({
+    const profileRepo = new TenantAwareRepository(this.entityProfileRepo, tenantContext.tenantId);
+    const profile = await profileRepo.findOne({
       where: { entityId: question.relatedEntityId },
     });
 
@@ -804,7 +909,7 @@ export class QuestionManagerServiceService {
       // Update mostReliableField based on answer
       const selectedField = answer.toString();
       profile.mostReliableField = selectedField;
-      await this.entityProfileRepo.save(profile);
+      await profileRepo.save(profile);
     }
   }
 
@@ -812,26 +917,32 @@ export class QuestionManagerServiceService {
    * Process exception reason answer
    */
   private async processExceptionReasonAnswer(
+    tenantContext: { tenantId: string; userId: string; role: string },
     question: LearningQuestion,
     answer: any,
   ): Promise<void> {
     // Log exception reasons for audit trail
     // In a real system, this might update a separate audit log table
     // or trigger notifications to admins
-    console.log(
-      `Exception recorded for ${question.relatedEntityId}: ${answer}`,
+    this.logger.log(
+      `[Tenant: ${tenantContext.tenantId}] Exception recorded for ${question.relatedEntityId}: ${answer}`,
     );
   }
 
   /**
    * Get answer processing summary
    */
-  async getAnswerProcessingSummary(): Promise<{
+  async getAnswerProcessingSummary(
+    tenantContext: { tenantId: string; userId: string; role: string },
+  ): Promise<{
     totalAnswered: number;
     processedByType: Record<QuestionType, number>;
     lastProcessedAt: Date | null;
   }> {
-    const answered = await this.questionRepo.find({
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Getting answer processing summary`);
+
+    const questionRepo = new TenantAwareRepository(this.questionRepo, tenantContext.tenantId);
+    const answered = await questionRepo.find({
       where: { answeredAt: Not(IsNull()) },
     });
 
@@ -870,13 +981,16 @@ export class QuestionManagerServiceService {
    * Bulk answer multiple questions
    */
   async bulkAnswerQuestions(
+    tenantContext: { tenantId: string; userId: string; role: string },
     answers: Array<{ id: string; answer: any }>,
   ): Promise<QuestionResponseDto[]> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Bulk answering ${answers.length} questions`);
+
     const results: QuestionResponseDto[] = [];
 
     for (const item of answers) {
       try {
-        const updated = await this.answerQuestion(item.id, {
+        const updated = await this.answerQuestion(tenantContext, item.id, {
           answer: item.answer,
         });
         results.push(updated);
@@ -894,12 +1008,17 @@ export class QuestionManagerServiceService {
   /**
    * Bulk delete multiple questions
    */
-  async bulkDeleteQuestions(ids: string[]): Promise<{ deleted: number }> {
+  async bulkDeleteQuestions(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    ids: string[],
+  ): Promise<{ deleted: number }> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Bulk deleting ${ids.length} questions`);
+
     let deleted = 0;
 
     for (const id of ids) {
       try {
-        await this.deleteQuestion(id);
+        await this.deleteQuestion(tenantContext, id);
         deleted++;
       } catch (error) {
         // Skip not found, continue with others
@@ -916,16 +1035,20 @@ export class QuestionManagerServiceService {
    * Bulk update question priority
    */
   async bulkUpdatePriority(
+    tenantContext: { tenantId: string; userId: string; role: string },
     ids: string[],
     priority: QuestionPriority,
   ): Promise<QuestionResponseDto[]> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Bulk updating priority for ${ids.length} questions`);
+
+    const questionRepo = new TenantAwareRepository(this.questionRepo, tenantContext.tenantId);
     const results: QuestionResponseDto[] = [];
 
     for (const id of ids) {
-      const question = await this.questionRepo.findOne({ where: { id } });
+      const question = await questionRepo.findOne({ where: { id } });
       if (question) {
         question.priority = priority;
-        const updated = await this.questionRepo.save(question);
+        const updated = await questionRepo.save(question);
         results.push(this.toQuestionResponse(updated));
       }
     }
@@ -937,16 +1060,20 @@ export class QuestionManagerServiceService {
    * Bulk update question timing
    */
   async bulkUpdateTiming(
+    tenantContext: { tenantId: string; userId: string; role: string },
     ids: string[],
     timing: QuestionTiming,
   ): Promise<QuestionResponseDto[]> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Bulk updating timing for ${ids.length} questions`);
+
+    const questionRepo = new TenantAwareRepository(this.questionRepo, tenantContext.tenantId);
     const results: QuestionResponseDto[] = [];
 
     for (const id of ids) {
-      const question = await this.questionRepo.findOne({ where: { id } });
+      const question = await questionRepo.findOne({ where: { id } });
       if (question) {
         question.timing = timing;
-        const updated = await this.questionRepo.save(question);
+        const updated = await questionRepo.save(question);
         results.push(this.toQuestionResponse(updated));
       }
     }
@@ -958,10 +1085,14 @@ export class QuestionManagerServiceService {
    * Clear answered questions (archive or delete)
    */
   async clearAnsweredQuestions(
+    tenantContext: { tenantId: string; userId: string; role: string },
     beforeDate?: Date,
   ): Promise<{ cleared: number }> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Clearing answered questions`);
+
     const queryBuilder = this.questionRepo.createQueryBuilder('question');
-    queryBuilder.where('question.answeredAt IS NOT NULL');
+    queryBuilder.where('question.tenantId = :tenantId', { tenantId: tenantContext.tenantId });
+    queryBuilder.andWhere('question.answeredAt IS NOT NULL');
 
     if (beforeDate) {
       queryBuilder.andWhere('question.answeredAt < :beforeDate', {
@@ -978,13 +1109,19 @@ export class QuestionManagerServiceService {
   /**
    * Expire questions by criteria
    */
-  async expireQuestions(params: {
-    olderThanDays?: number;
-    timing?: QuestionTiming;
-    type?: QuestionType;
-  }): Promise<{ expired: number }> {
+  async expireQuestions(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    params: {
+      olderThanDays?: number;
+      timing?: QuestionTiming;
+      type?: QuestionType;
+    },
+  ): Promise<{ expired: number }> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Expiring questions by criteria`);
+
     const queryBuilder = this.questionRepo.createQueryBuilder('question');
-    queryBuilder.where('question.answeredAt IS NULL');
+    queryBuilder.where('question.tenantId = :tenantId', { tenantId: tenantContext.tenantId });
+    queryBuilder.andWhere('question.answeredAt IS NULL');
 
     if (params.olderThanDays) {
       const cutoffDate = new Date();
@@ -1018,7 +1155,9 @@ export class QuestionManagerServiceService {
   /**
    * Get queue metrics
    */
-  async getQueueMetrics(): Promise<{
+  async getQueueMetrics(
+    tenantContext: { tenantId: string; userId: string; role: string },
+  ): Promise<{
     totalUnanswered: number;
     byPriority: Record<QuestionPriority, number>;
     byTiming: Record<QuestionTiming, number>;
@@ -1026,7 +1165,10 @@ export class QuestionManagerServiceService {
     oldestUnanswered: Date | null;
     newestUnanswered: Date | null;
   }> {
-    const unanswered = await this.questionRepo.find({
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Getting queue metrics`);
+
+    const questionRepo = new TenantAwareRepository(this.questionRepo, tenantContext.tenantId);
+    const unanswered = await questionRepo.find({
       where: { answeredAt: IsNull() },
     });
 
@@ -1050,7 +1192,7 @@ export class QuestionManagerServiceService {
     }
 
     // Calculate average time to answer for answered questions
-    const answered = await this.questionRepo.find({
+    const answered = await questionRepo.find({
       where: { answeredAt: Not(IsNull()) },
     });
 
@@ -1095,8 +1237,13 @@ export class QuestionManagerServiceService {
   /**
    * Reorder queue based on updated priorities
    */
-  async reorderQueue(): Promise<QuestionResponseDto[]> {
-    const unanswered = await this.questionRepo.find({
+  async reorderQueue(
+    tenantContext: { tenantId: string; userId: string; role: string },
+  ): Promise<QuestionResponseDto[]> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Reordering queue`);
+
+    const questionRepo = new TenantAwareRepository(this.questionRepo, tenantContext.tenantId);
+    const unanswered = await questionRepo.find({
       where: { answeredAt: IsNull() },
       order: {
         priority: 'DESC',
@@ -1110,17 +1257,22 @@ export class QuestionManagerServiceService {
   /**
    * Get questions requiring immediate attention
    */
-  async getImmediateAttentionQuestions(): Promise<QuestionResponseDto[]> {
-    const questions = await this.questionRepo.find({
-      where: [
-        { timing: QuestionTiming.IMMEDIATE, answeredAt: IsNull() },
-        { priority: QuestionPriority.CRITICAL, answeredAt: IsNull() },
-      ],
-      order: {
-        priority: 'DESC',
-        createdAt: 'ASC',
-      },
-    });
+  async getImmediateAttentionQuestions(
+    tenantContext: { tenantId: string; userId: string; role: string },
+  ): Promise<QuestionResponseDto[]> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Getting immediate attention questions`);
+
+    const questions = await this.questionRepo
+      .createQueryBuilder('question')
+      .where('question.tenantId = :tenantId', { tenantId: tenantContext.tenantId })
+      .andWhere('question.answeredAt IS NULL')
+      .andWhere('(question.timing = :immediate OR question.priority = :critical)', {
+        immediate: QuestionTiming.IMMEDIATE,
+        critical: QuestionPriority.CRITICAL,
+      })
+      .orderBy('question.priority', 'DESC')
+      .addOrderBy('question.createdAt', 'ASC')
+      .getMany();
 
     return questions.map((q) => this.toQuestionResponse(q));
   }
@@ -1129,6 +1281,7 @@ export class QuestionManagerServiceService {
    * Get questions by reconciliation with queue status
    */
   async getQuestionsByReconciliation(
+    tenantContext: { tenantId: string; userId: string; role: string },
     reconciliationId: string,
   ): Promise<{
     total: number;
@@ -1136,7 +1289,10 @@ export class QuestionManagerServiceService {
     unanswered: number;
     questions: QuestionResponseDto[];
   }> {
-    const questions = await this.questionRepo.find({
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Getting questions for reconciliation: ${reconciliationId}`);
+
+    const questionRepo = new TenantAwareRepository(this.questionRepo, tenantContext.tenantId);
+    const questions = await questionRepo.find({
       where: { relatedReconciliationId: reconciliationId },
       order: {
         priority: 'DESC',
