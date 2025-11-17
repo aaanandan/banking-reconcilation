@@ -17,6 +17,14 @@ export class LearningQuestion {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  // ═══════════════════════════════════════════════════════════
+  // MULTI-TENANCY
+  // ═══════════════════════════════════════════════════════════
+  @Column()
+  @Index()
+  tenantId: string;
+  // ═══════════════════════════════════════════════════════════
+
   @Column({ unique: true })
   questionId: string;
 
