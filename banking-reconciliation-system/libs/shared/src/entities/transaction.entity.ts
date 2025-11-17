@@ -21,6 +21,14 @@ export class Transaction {
   @PrimaryGeneratedColumn()
   id: number;
 
+  // ═══════════════════════════════════════════════════════════
+  // MULTI-TENANCY
+  // ═══════════════════════════════════════════════════════════
+  @Column()
+  @Index()
+  tenantId: string;
+  // ═══════════════════════════════════════════════════════════
+
   @Column()
   source: string;  // 'bank' | 'ledger'
 
