@@ -18,6 +18,14 @@ export class MatchCandidate {
   @PrimaryGeneratedColumn()
   id: number;
 
+  // ═══════════════════════════════════════════════════════════
+  // MULTI-TENANCY
+  // ═══════════════════════════════════════════════════════════
+  @Column()
+  @Index()
+  tenantId: string;
+  // ═══════════════════════════════════════════════════════════
+
   @Column()
   bankTransactionId: number;
 
