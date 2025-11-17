@@ -1,4 +1,5 @@
 {
+  "files": ["global.d.ts"],
   "compilerOptions": {
     "module": "nodenext",
     "moduleResolution": "nodenext",
@@ -28,6 +29,10 @@
       "@app/shared/*": [
         "libs/shared/src/*"
       ]
-    }
+    },
+    "typeRoots": [
+      "./node_modules/@types",
+      "./@types"
+    ]
   }
 }

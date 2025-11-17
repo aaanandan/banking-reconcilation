@@ -10,7 +10,7 @@ import {
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { DataPrepService } from './data-prep.service';
-import { MultiFilesAnalysisResponseDto } from '@app/shared';
+import { MultiFilesAnalysisResponseDto, TenantContext } from '@app/shared';
 
 @ApiTags('Data Preparation')
 @Controller('data-prep')
@@ -74,6 +74,7 @@ export class DataPrepController {
     ]),
   )
   async analyzeMultiBank(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @UploadedFiles()
     files: {
       bankFiles?: Express.Multer.File[];
@@ -97,7 +98,11 @@ export class DataPrepController {
       }
     }
 
-    return this.dataPrepService.analyzeMultiBankFiles(files.bankFiles, files.ledgerFile[0]);
+    return this.dataPrepService.analyzeMultiBankFiles(
+      files.bankFiles,
+      files.ledgerFile[0],
+      tenantContext,
+    );
   }
 
   @Post('validate-and-prepare')

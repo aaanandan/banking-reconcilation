@@ -31,12 +31,18 @@ export class DataPrepService {
   /**
    * Step 11: Analyze multiple bank files and ledger file
    * Returns comprehensive analysis with column detection, date ranges, and auto-mappings
+   *
+   * TENANT-AWARE: Accepts tenantContext for future database operations
+   * When database operations are added, use TenantAwareRepository with tenantContext.tenantId
    */
   async analyzeMultiBankFiles(
     bankFiles: Express.Multer.File[],
     ledgerFile: Express.Multer.File,
+    tenantContext: { tenantId: string; userId: string; role: string },
   ): Promise<MultiFilesAnalysisResponseDto> {
-    this.logger.log(`Analyzing ${bankFiles.length} bank files and 1 ledger file`);
+    this.logger.log(
+      `[Tenant: ${tenantContext.tenantId}] Analyzing ${bankFiles.length} bank files and 1 ledger file`,
+    );
 
     // Parse all CSV files
     const parsedBankFiles = await this.parseBankFiles(bankFiles);
