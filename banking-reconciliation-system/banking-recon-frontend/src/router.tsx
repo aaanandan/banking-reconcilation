@@ -1,7 +1,7 @@
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
+import { Login } from './pages/Login/Login';
 
-// Placeholder components (will be replaced in Steps 71-90)
-const Login = () => <div>Login Page</div>;
+// Placeholder components (will be replaced in Steps 76-90)
 const Register = () => <div>Register Page</div>;
 const Dashboard = () => <div>Dashboard Page</div>;
 const UploadFiles = () => <div>Upload Files Page</div>;
