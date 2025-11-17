@@ -1,4 +1,5 @@
 // Export all entities
+export * from './tenant.entity';
 export * from './user.entity';
 export * from './reconciliation.entity';
 export * from './bank-file.entity';
