@@ -37,10 +37,10 @@ export class User {
   passwordHash: string;
 
   @Column()
-  name: string;
+  firstName: string;
 
-  @Column({ nullable: true })
-  company: string;
+  @Column()
+  lastName: string;
 
   @Column({ default: 'user' })
   role: string;  // 'admin' | 'user'
