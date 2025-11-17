@@ -6,6 +6,7 @@ import {
   Column,
   CreateDateColumn,
   ManyToOne,
+  Index,
 } from 'typeorm';
 import { User } from './user.entity';
 
@@ -13,6 +14,14 @@ import { User } from './user.entity';
 export class UserFeedback {
   @PrimaryGeneratedColumn()
   id: number;
+
+  // ═══════════════════════════════════════════════════════════
+  // MULTI-TENANCY
+  // ═══════════════════════════════════════════════════════════
+  @Column()
+  @Index()
+  tenantId: string;
+  // ═══════════════════════════════════════════════════════════
 
   @Column()
   reconciliationId: string;
