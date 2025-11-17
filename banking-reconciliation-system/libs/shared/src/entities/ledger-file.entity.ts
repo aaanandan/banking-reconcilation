@@ -5,12 +5,21 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  Index,
 } from 'typeorm';
 
 @Entity('ledger_files')
 export class LedgerFile {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  // ═══════════════════════════════════════════════════════════
+  // MULTI-TENANCY
+  // ═══════════════════════════════════════════════════════════
+  @Column()
+  @Index()
+  tenantId: string;
+  // ═══════════════════════════════════════════════════════════
 
   @Column()
   filename: string;
