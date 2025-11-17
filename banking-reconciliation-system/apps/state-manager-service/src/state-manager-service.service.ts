@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -8,6 +8,7 @@ import {
   Transaction,
   MatchCandidate,
   TransactionDto,
+  TenantAwareRepository,
 } from '@app/shared';
 import {
   CreateReconciliationDto,
@@ -22,9 +23,12 @@ import {
 /**
  * State Manager Service
  * Handles persistence of reconciliation state, transactions, and snapshots
+ * TENANT-AWARE: All operations scoped by tenantId
  */
 @Injectable()
 export class StateManagerServiceService {
+  private readonly logger = new Logger(StateManagerServiceService.name);
+
   constructor(
     @InjectRepository(Reconciliation)
     private readonly reconciliationRepo: Repository<Reconciliation>,
@@ -45,10 +49,21 @@ export class StateManagerServiceService {
   /**
    * Create a new reconciliation session
    * POST /state/reconciliation
+   * TENANT-AWARE: Uses TenantAwareRepository for all database operations
    */
-  async createReconciliation(dto: CreateReconciliationDto): Promise<{ reconciliationId: string }> {
-    // Create ledger file entity
-    const ledgerFile = this.ledgerFileRepo.create({
+  async createReconciliation(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    dto: CreateReconciliationDto
+  ): Promise<{ reconciliationId: string }> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Creating reconciliation for user ${tenantContext.userId}`);
+
+    // Create tenant-aware repositories
+    const ledgerRepo = new TenantAwareRepository(this.ledgerFileRepo, tenantContext.tenantId);
+    const bankRepo = new TenantAwareRepository(this.bankFileRepo, tenantContext.tenantId);
+    const reconRepo = new TenantAwareRepository(this.reconciliationRepo, tenantContext.tenantId);
+
+    // Create ledger file entity (tenantId auto-added)
+    const ledgerFile = await ledgerRepo.save({
       filename: dto.ledgerFile.filename,
       totalRecords: dto.ledgerFile.totalRecords,
       filteredRecords: dto.ledgerFile.filteredRecords,
@@ -58,12 +73,10 @@ export class StateManagerServiceService {
       latestDate: new Date(dto.ledgerFile.dateRange.latest),
     });
 
-    await this.ledgerFileRepo.save(ledgerFile);
-
-    // Create bank file entities
+    // Create bank file entities (tenantId auto-added)
     const bankFiles: BankFile[] = [];
     for (const bankFileDto of dto.bankFiles) {
-      const bankFile = this.bankFileRepo.create({
+      const savedBankFile = await bankRepo.save({
         bankId: bankFileDto.bankId,
         bankName: bankFileDto.bankName,
         filename: bankFileDto.filename,
@@ -74,13 +87,11 @@ export class StateManagerServiceService {
         earliestDate: new Date(bankFileDto.dateRange.earliest),
         latestDate: new Date(bankFileDto.dateRange.latest),
       });
-
-      const savedBankFile = await this.bankFileRepo.save(bankFile);
       bankFiles.push(savedBankFile);
     }
 
-    // Create reconciliation entity
-    const reconciliation = this.reconciliationRepo.create({
+    // Create reconciliation entity (tenantId auto-added)
+    const savedReconciliation = await reconRepo.save({
       userId: dto.userId,
       bankFiles,
       ledgerFile,
@@ -98,8 +109,6 @@ export class StateManagerServiceService {
       manualCount: 0,
       convergenceRate: 0,
     });
-
-    const savedReconciliation = await this.reconciliationRepo.save(reconciliation);
 
     // Update bank files with reconciliation reference
     for (const bankFile of bankFiles) {

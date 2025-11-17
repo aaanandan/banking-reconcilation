@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { StateManagerServiceService } from './state-manager-service.service';
-import { TransactionDto } from '@app/shared';
+import { TransactionDto, TenantContext } from '@app/shared';
 import {
   CreateReconciliationDto,
   CreateReconciliationResponseDto,
@@ -45,9 +45,10 @@ export class StateManagerServiceController {
   })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
   async createReconciliation(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body() createDto: CreateReconciliationDto,
   ): Promise<CreateReconciliationResponseDto> {
-    return this.stateManagerService.createReconciliation(createDto);
+    return this.stateManagerService.createReconciliation(tenantContext, createDto);
   }
 
   @Get('reconciliation/:id')
@@ -59,9 +60,10 @@ export class StateManagerServiceController {
   })
   @ApiResponse({ status: 404, description: 'Reconciliation not found' })
   async getReconciliation(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Param('id') id: string,
   ): Promise<ReconciliationStateDto> {
-    return this.stateManagerService.getReconciliation(id);
+    return this.stateManagerService.getReconciliation(tenantContext, id);
   }
 
   @Patch('reconciliation/:id')
@@ -73,10 +75,11 @@ export class StateManagerServiceController {
   })
   @ApiResponse({ status: 404, description: 'Reconciliation not found' })
   async updateReconciliation(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Param('id') id: string,
     @Body() updateDto: UpdateReconciliationDto,
   ): Promise<UpdateReconciliationResponseDto> {
-    return this.stateManagerService.updateReconciliation(id, updateDto);
+    return this.stateManagerService.updateReconciliation(tenantContext, id, updateDto);
   }
 
   @Delete('reconciliation/:id')
@@ -93,9 +96,10 @@ export class StateManagerServiceController {
   })
   @ApiResponse({ status: 404, description: 'Reconciliation not found' })
   async deleteReconciliation(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Param('id') id: string,
   ): Promise<{ success: boolean }> {
-    return this.stateManagerService.deleteReconciliation(id);
+    return this.stateManagerService.deleteReconciliation(tenantContext, id);
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -112,9 +116,10 @@ export class StateManagerServiceController {
   @ApiResponse({ status: 404, description: 'Reconciliation not found' })
   @ApiResponse({ status: 400, description: 'Invalid transaction data' })
   async bulkStoreTransactions(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body() bulkDto: BulkStoreTransactionsDto,
   ): Promise<BulkStoreTransactionsResponseDto> {
-    return this.stateManagerService.bulkStoreTransactions(bulkDto);
+    return this.stateManagerService.bulkStoreTransactions(tenantContext, bulkDto);
   }
 
   @Get('transactions')
@@ -129,9 +134,10 @@ export class StateManagerServiceController {
     type: [TransactionDto],
   })
   async queryTransactions(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Query() query: QueryTransactionsDto,
   ): Promise<TransactionDto[]> {
-    return this.stateManagerService.queryTransactions(query);
+    return this.stateManagerService.queryTransactions(tenantContext, query);
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -146,10 +152,11 @@ export class StateManagerServiceController {
   })
   @ApiResponse({ status: 404, description: 'Reconciliation not found' })
   async saveSnapshot(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Param('id') id: string,
     @Body() dto: { snapshotName?: string; notes?: string },
   ) {
-    return this.stateManagerService.saveSnapshot(id, dto.snapshotName, dto.notes);
+    return this.stateManagerService.saveSnapshot(tenantContext, id, dto.snapshotName, dto.notes);
   }
 
   @Post('reconciliation/:id/snapshot/:snapshotId/resume')
@@ -160,10 +167,11 @@ export class StateManagerServiceController {
   })
   @ApiResponse({ status: 404, description: 'Reconciliation or snapshot not found' })
   async resumeFromSnapshot(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Param('id') id: string,
     @Param('snapshotId') snapshotId: string,
   ) {
-    return this.stateManagerService.resumeFromSnapshot(id, snapshotId);
+    return this.stateManagerService.resumeFromSnapshot(tenantContext, id, snapshotId);
   }
 
   @Get('reconciliation/:id/snapshots')
@@ -173,7 +181,10 @@ export class StateManagerServiceController {
     description: 'Snapshots retrieved successfully',
   })
   @ApiResponse({ status: 404, description: 'Reconciliation not found' })
-  async listSnapshots(@Param('id') id: string) {
-    return this.stateManagerService.listSnapshots(id);
+  async listSnapshots(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
+    @Param('id') id: string,
+  ) {
+    return this.stateManagerService.listSnapshots(tenantContext, id);
   }
 }
