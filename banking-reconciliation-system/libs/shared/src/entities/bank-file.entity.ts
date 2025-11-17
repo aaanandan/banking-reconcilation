@@ -6,6 +6,7 @@ import {
   Column,
   CreateDateColumn,
   ManyToOne,
+  Index,
 } from 'typeorm';
 import { Reconciliation } from './reconciliation.entity';
 
@@ -13,6 +14,14 @@ import { Reconciliation } from './reconciliation.entity';
 export class BankFile {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  // ═══════════════════════════════════════════════════════════
+  // MULTI-TENANCY
+  // ═══════════════════════════════════════════════════════════
+  @Column()
+  @Index()
+  tenantId: string;
+  // ═══════════════════════════════════════════════════════════
 
   @Column()
   bankId: string;  // bank_1, bank_2, bank_3...
