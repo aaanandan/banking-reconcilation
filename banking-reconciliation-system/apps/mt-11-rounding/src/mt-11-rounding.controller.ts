@@ -5,6 +5,7 @@ import {
   RoundingClassificationRequestDto,
   RoundingClassificationResponseDto,
 } from './dto/classification.dto';
+import { TenantContext } from '@app/shared';
 
 /**
  * MT-11 Rounding Differences Controller
@@ -54,8 +55,9 @@ export class Mt11RoundingController {
     type: RoundingClassificationResponseDto,
   })
   classifyRoundingDifferences(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body() request: RoundingClassificationRequestDto,
   ): RoundingClassificationResponseDto {
-    return this.mt11Service.classifyRoundingDifferences(request);
+    return this.mt11Service.classifyRoundingDifferences(tenantContext, request);
   }
 }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { TransactionDto } from '@app/shared';
 import {
   ReversalPairDto,
@@ -32,6 +32,8 @@ import {
  */
 @Injectable()
 export class Mt08ReversalsService {
+  private readonly logger = new Logger(Mt08ReversalsService.name);
+
   // Reversal detection keywords
   private readonly REVERSAL_KEYWORDS = [
     'reversal',
@@ -64,8 +66,11 @@ export class Mt08ReversalsService {
    * 4. Return pairs
    */
   findReversalPairs(
+    tenantContext: { tenantId: string; userId: string; role: string },
     request: ReversalPairingRequestDto,
   ): ReversalPairingResponseDto {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Running MT-08 matching algorithm`);
+
     const pairs: ReversalPairDto[] = [];
     const matched = new Set<number>();
 

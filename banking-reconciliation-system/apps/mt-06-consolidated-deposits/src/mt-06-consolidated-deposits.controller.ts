@@ -5,6 +5,7 @@ import {
   ConsolidatedDepositRequestDto,
   ConsolidatedDepositResponseDto,
 } from './dto/match.dto';
+import { TenantContext } from '@app/shared';
 
 /**
  * MT-06 Consolidated Deposits Controller
@@ -55,8 +56,9 @@ export class Mt06ConsolidatedDepositsController {
     type: ConsolidatedDepositResponseDto,
   })
   findConsolidatedDeposits(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body() request: ConsolidatedDepositRequestDto,
   ): ConsolidatedDepositResponseDto {
-    return this.mt06Service.findConsolidatedDeposits(request);
+    return this.mt06Service.findConsolidatedDeposits(tenantContext, request);
   }
 }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { TransactionDto } from '@app/shared';
 import {
   PayerGroupDto,
@@ -12,9 +12,14 @@ import {
  */
 @Injectable()
 export class Mt12HighVolumePayerService {
+  private readonly logger = new Logger(Mt12HighVolumePayerService.name);
   private readonly DEFAULT_VOLUME_THRESHOLD = 5;
 
-  findHighVolumePayers(request: HighVolumeMatchingRequestDto): HighVolumeMatchingResponseDto {
+  findHighVolumePayers(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    request: HighVolumeMatchingRequestDto,
+  ): HighVolumeMatchingResponseDto {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Running MT-12 matching algorithm`);
     const threshold = request.volumeThreshold ?? this.DEFAULT_VOLUME_THRESHOLD;
     const payerMap = new Map<string, TransactionDto[]>();
 

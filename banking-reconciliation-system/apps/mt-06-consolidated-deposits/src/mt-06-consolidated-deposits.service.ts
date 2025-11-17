@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { TransactionDto } from '@app/shared';
 import {
   ConsolidatedDepositMatchDto,
@@ -31,6 +31,8 @@ import {
  */
 @Injectable()
 export class Mt06ConsolidatedDepositsService {
+  private readonly logger = new Logger(Mt06ConsolidatedDepositsService.name);
+
   // Deposit keywords
   private readonly DEPOSIT_KEYWORDS = [
     'deposit',
@@ -60,8 +62,11 @@ export class Mt06ConsolidatedDepositsService {
    * 5. Return matches with bank breakdown
    */
   findConsolidatedDeposits(
+    tenantContext: { tenantId: string; userId: string; role: string },
     request: ConsolidatedDepositRequestDto,
   ): ConsolidatedDepositResponseDto {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Running MT-06 matching algorithm`);
+
     const amountTolerance =
       request.amountTolerance ?? this.DEFAULT_AMOUNT_TOLERANCE;
     const dateTolerance = request.dateTolerance ?? this.DEFAULT_DATE_TOLERANCE;

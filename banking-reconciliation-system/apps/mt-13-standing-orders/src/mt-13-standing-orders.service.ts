@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { TransactionDto } from '@app/shared';
 import {
   StandingOrderGroupDto,
@@ -12,9 +12,14 @@ import {
  */
 @Injectable()
 export class Mt13StandingOrdersService {
+  private readonly logger = new Logger(Mt13StandingOrdersService.name);
   private readonly DEFAULT_MIN_OCCURRENCES = 3;
 
-  findStandingOrders(request: StandingOrderMatchingRequestDto): StandingOrderMatchingResponseDto {
+  findStandingOrders(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    request: StandingOrderMatchingRequestDto,
+  ): StandingOrderMatchingResponseDto {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Running MT-13 matching algorithm`);
     const minOccurrences = request.minOccurrences ?? this.DEFAULT_MIN_OCCURRENCES;
     const patternMap = new Map<string, TransactionDto[]>();
 

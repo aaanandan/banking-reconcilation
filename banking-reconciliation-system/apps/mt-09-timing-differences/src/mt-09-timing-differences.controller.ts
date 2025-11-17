@@ -5,6 +5,7 @@ import {
   TimingDifferenceMatchRequestDto,
   TimingDifferenceMatchResponseDto,
 } from './dto/match.dto';
+import { TenantContext } from '@app/shared';
 
 /**
  * MT-09 Timing Differences Controller
@@ -56,8 +57,9 @@ export class Mt09TimingDifferencesController {
     type: TimingDifferenceMatchResponseDto,
   })
   findTimingMatches(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body() request: TimingDifferenceMatchRequestDto,
   ): TimingDifferenceMatchResponseDto {
-    return this.mt09Service.findTimingMatches(request);
+    return this.mt09Service.findTimingMatches(tenantContext, request);
   }
 }

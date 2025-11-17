@@ -5,6 +5,7 @@ import {
   SplitPaymentMatchRequestDto,
   SplitPaymentMatchResponseDto,
 } from './dto/match.dto';
+import { TenantContext } from '@app/shared';
 
 /**
  * MT-05 Split Payments Controller
@@ -54,8 +55,9 @@ export class Mt05SplitPaymentsController {
     type: SplitPaymentMatchResponseDto,
   })
   findSplitPayments(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body() request: SplitPaymentMatchRequestDto,
   ): SplitPaymentMatchResponseDto {
-    return this.mt05Service.findSplitPayments(request);
+    return this.mt05Service.findSplitPayments(tenantContext, request);
   }
 }

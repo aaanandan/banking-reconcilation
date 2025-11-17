@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { TransactionDto } from '@app/shared';
 import {
   FuzzyMatchRequestDto,
@@ -19,6 +19,8 @@ import {
  */
 @Injectable()
 export class Mt02NearExactService {
+  private readonly logger = new Logger(Mt02NearExactService.name);
+
   /**
    * Default thresholds for fuzzy matching
    */
@@ -46,7 +48,12 @@ export class Mt02NearExactService {
    * @param request - Bank transactions, ledger transactions, optional thresholds, and optional field profile
    * @returns Match candidates with confidence scores and detailed breakdowns
    */
-  findFuzzyMatches(request: FuzzyMatchRequestDto): FuzzyMatchResponseDto {
+  findFuzzyMatches(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    request: FuzzyMatchRequestDto,
+  ): FuzzyMatchResponseDto {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Running MT-02 matching algorithm`);
+
     const thresholds = request.thresholds || this.DEFAULT_THRESHOLDS;
     const matches: FuzzyMatchCandidateDto[] = [];
     const { bankTransactions, ledgerTransactions, fieldProfile } = request;

@@ -5,6 +5,7 @@ import {
   CurrencyClassificationRequestDto,
   CurrencyClassificationResponseDto,
 } from './dto/classification.dto';
+import { TenantContext } from '@app/shared';
 
 /**
  * MT-10 Currency Conversion Controller
@@ -55,8 +56,9 @@ export class Mt10CurrencyController {
     type: CurrencyClassificationResponseDto,
   })
   classifyCurrencyConversions(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body() request: CurrencyClassificationRequestDto,
   ): CurrencyClassificationResponseDto {
-    return this.mt10Service.classifyCurrencyConversions(request);
+    return this.mt10Service.classifyCurrencyConversions(tenantContext, request);
   }
 }

@@ -5,6 +5,7 @@ import {
   ReversalPairingRequestDto,
   ReversalPairingResponseDto,
 } from './dto/pairing.dto';
+import { TenantContext } from '@app/shared';
 
 /**
  * MT-08 Reversals & Corrections Controller
@@ -55,8 +56,9 @@ export class Mt08ReversalsController {
     type: ReversalPairingResponseDto,
   })
   findReversalPairs(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body() request: ReversalPairingRequestDto,
   ): ReversalPairingResponseDto {
-    return this.mt08Service.findReversalPairs(request);
+    return this.mt08Service.findReversalPairs(tenantContext, request);
   }
 }

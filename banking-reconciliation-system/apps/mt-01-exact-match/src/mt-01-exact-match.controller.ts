@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Mt01ExactMatchService } from './mt-01-exact-match.service';
 import { MatchRequestDto, MatchResponseDto } from './dto/match.dto';
+import { TenantContext } from '@app/shared';
 
 @ApiTags('Matching')
 @Controller('match')
@@ -24,7 +25,10 @@ export class Mt01ExactMatchController {
   @ApiOperation({ summary: 'Find exact matches between bank and ledger transactions' })
   @ApiResponse({ status: 200, description: 'Match candidates returned', type: MatchResponseDto })
   @ApiResponse({ status: 400, description: 'Invalid request payload' })
-  findExactMatches(@Body() request: MatchRequestDto): MatchResponseDto {
-    return this.mt01ExactMatchService.findExactMatches(request);
+  findExactMatches(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
+    @Body() request: MatchRequestDto,
+  ): MatchResponseDto {
+    return this.mt01ExactMatchService.findExactMatches(tenantContext, request);
   }
 }

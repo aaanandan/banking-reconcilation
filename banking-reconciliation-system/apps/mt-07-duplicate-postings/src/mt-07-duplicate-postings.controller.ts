@@ -5,6 +5,7 @@ import {
   DuplicateClassificationRequestDto,
   DuplicateClassificationResponseDto,
 } from './dto/classification.dto';
+import { TenantContext } from '@app/shared';
 
 /**
  * MT-07 Duplicate Postings Controller
@@ -55,8 +56,9 @@ export class Mt07DuplicatePostingsController {
     type: DuplicateClassificationResponseDto,
   })
   classifyDuplicates(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body() request: DuplicateClassificationRequestDto,
   ): DuplicateClassificationResponseDto {
-    return this.mt07Service.classifyDuplicates(request);
+    return this.mt07Service.classifyDuplicates(tenantContext, request);
   }
 }

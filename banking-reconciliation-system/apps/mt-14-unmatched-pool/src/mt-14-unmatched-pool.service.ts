@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { UnmatchedPoolRequestDto, UnmatchedPoolResponseDto } from './dto/pool.dto';
 
 /**
@@ -7,7 +7,13 @@ import { UnmatchedPoolRequestDto, UnmatchedPoolResponseDto } from './dto/pool.dt
  */
 @Injectable()
 export class Mt14UnmatchedPoolService {
-  getUnmatchedPool(request: UnmatchedPoolRequestDto): UnmatchedPoolResponseDto {
+  private readonly logger = new Logger(Mt14UnmatchedPoolService.name);
+
+  getUnmatchedPool(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    request: UnmatchedPoolRequestDto,
+  ): UnmatchedPoolResponseDto {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Running MT-14 matching algorithm`);
     const unmatched = request.transactions.filter(t => t.status === 'unmatched');
 
     return {

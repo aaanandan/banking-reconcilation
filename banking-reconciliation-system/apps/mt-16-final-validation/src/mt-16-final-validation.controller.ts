@@ -5,6 +5,7 @@ import {
   ValidationRequestDto,
   ValidationResponseDto,
 } from './dto/validation.dto';
+import { TenantContext } from '@app/shared';
 
 /**
  * MT-16 Final Validation Controller
@@ -61,8 +62,9 @@ export class Mt16FinalValidationController {
     type: ValidationResponseDto,
   })
   validateMatches(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body() request: ValidationRequestDto,
   ): ValidationResponseDto {
-    return this.mt16Service.validateMatches(request);
+    return this.mt16Service.validateMatches(tenantContext, request);
   }
 }

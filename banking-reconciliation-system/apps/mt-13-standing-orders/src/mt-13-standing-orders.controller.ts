@@ -5,6 +5,7 @@ import {
   StandingOrderMatchingRequestDto,
   StandingOrderMatchingResponseDto,
 } from './dto/matching.dto';
+import { TenantContext } from '@app/shared';
 
 @ApiTags('MT-13 Standing Orders')
 @Controller()
@@ -20,7 +21,10 @@ export class Mt13StandingOrdersController {
   @Post('find')
   @ApiOperation({ summary: 'Find standing order patterns' })
   @ApiResponse({ status: 200, type: StandingOrderMatchingResponseDto })
-  findStandingOrders(@Body() request: StandingOrderMatchingRequestDto): StandingOrderMatchingResponseDto {
-    return this.mt13Service.findStandingOrders(request);
+  findStandingOrders(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
+    @Body() request: StandingOrderMatchingRequestDto,
+  ): StandingOrderMatchingResponseDto {
+    return this.mt13Service.findStandingOrders(tenantContext, request);
   }
 }

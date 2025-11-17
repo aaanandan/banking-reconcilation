@@ -5,6 +5,7 @@ import {
   ClassificationRequestDto,
   ClassificationResponseDto,
 } from './dto/classification.dto';
+import { TenantContext } from '@app/shared';
 
 /**
  * MT-03 Bank Fees Controller
@@ -60,8 +61,9 @@ export class Mt03BankFeesController {
   })
   @ApiResponse({ status: 400, description: 'Invalid request' })
   classifyFees(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body() request: ClassificationRequestDto,
   ): ClassificationResponseDto {
-    return this.mt03Service.classifyBankFees(request);
+    return this.mt03Service.classifyBankFees(tenantContext, request);
   }
 }

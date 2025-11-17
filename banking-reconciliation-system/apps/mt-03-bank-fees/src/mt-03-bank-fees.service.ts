@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { TransactionDto } from '@app/shared';
 import {
   ClassificationDto,
@@ -30,6 +30,8 @@ import {
  */
 @Injectable()
 export class Mt03BankFeesService {
+  private readonly logger = new Logger(Mt03BankFeesService.name);
+
   // Bank fee keywords (common patterns)
   private readonly FEE_KEYWORDS = [
     'fee',
@@ -79,7 +81,12 @@ export class Mt03BankFeesService {
    * 4. Calculate confidence based on keyword matches and amount
    * 5. Return classification result
    */
-  classifyBankFees(request: ClassificationRequestDto): ClassificationResponseDto {
+  classifyBankFees(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    request: ClassificationRequestDto,
+  ): ClassificationResponseDto {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Running MT-03 matching algorithm`);
+
     const classifications: ClassificationDto[] = [];
     let totalFeeAmount = 0;
 

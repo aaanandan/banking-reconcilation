@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { TransactionDto } from '@app/shared';
 import {
   TimingDifferenceMatchDto,
@@ -35,6 +35,8 @@ import {
  */
 @Injectable()
 export class Mt09TimingDifferencesService {
+  private readonly logger = new Logger(Mt09TimingDifferencesService.name);
+
   // Default configuration
   private readonly DEFAULT_MAX_DATE_DIFFERENCE = 5; // 5 days
   private readonly DEFAULT_AMOUNT_TOLERANCE = 0.001; // 0.1%
@@ -51,8 +53,11 @@ export class Mt09TimingDifferencesService {
    * 5. Return matches with confidence scores
    */
   findTimingMatches(
+    tenantContext: { tenantId: string; userId: string; role: string },
     request: TimingDifferenceMatchRequestDto,
   ): TimingDifferenceMatchResponseDto {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Running MT-09 matching algorithm`);
+
     const maxDateDiff = request.maxDateDifference ?? this.DEFAULT_MAX_DATE_DIFFERENCE;
     const amountTolerance = request.amountTolerance ?? this.DEFAULT_AMOUNT_TOLERANCE;
     const minDescSimilarity =

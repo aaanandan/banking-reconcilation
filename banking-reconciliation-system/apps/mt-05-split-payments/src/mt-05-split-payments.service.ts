@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { TransactionDto } from '@app/shared';
 import {
   SplitPaymentMatchDto,
@@ -34,6 +34,8 @@ import {
  */
 @Injectable()
 export class Mt05SplitPaymentsService {
+  private readonly logger = new Logger(Mt05SplitPaymentsService.name);
+
   // Default configuration
   private readonly DEFAULT_MAX_SPLIT_SIZE = 5;
   private readonly DEFAULT_AMOUNT_TOLERANCE = 0.01; // 1%
@@ -50,8 +52,11 @@ export class Mt05SplitPaymentsService {
    * 4. Return matches with confidence scores
    */
   findSplitPayments(
+    tenantContext: { tenantId: string; userId: string; role: string },
     request: SplitPaymentMatchRequestDto,
   ): SplitPaymentMatchResponseDto {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Running MT-05 matching algorithm`);
+
     const maxSplitSize = request.maxSplitSize ?? this.DEFAULT_MAX_SPLIT_SIZE;
     const amountTolerance =
       request.amountTolerance ?? this.DEFAULT_AMOUNT_TOLERANCE;

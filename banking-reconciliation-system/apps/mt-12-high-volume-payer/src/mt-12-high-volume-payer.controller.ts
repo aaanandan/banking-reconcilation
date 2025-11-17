@@ -5,6 +5,7 @@ import {
   HighVolumeMatchingRequestDto,
   HighVolumeMatchingResponseDto,
 } from './dto/matching.dto';
+import { TenantContext } from '@app/shared';
 
 @ApiTags('MT-12 High-Volume Payer')
 @Controller()
@@ -24,7 +25,10 @@ export class Mt12HighVolumePayerController {
   @Post('find')
   @ApiOperation({ summary: 'Find high-volume payer groups' })
   @ApiResponse({ status: 200, type: HighVolumeMatchingResponseDto })
-  findHighVolumePayers(@Body() request: HighVolumeMatchingRequestDto): HighVolumeMatchingResponseDto {
-    return this.mt12Service.findHighVolumePayers(request);
+  findHighVolumePayers(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
+    @Body() request: HighVolumeMatchingRequestDto,
+  ): HighVolumeMatchingResponseDto {
+    return this.mt12Service.findHighVolumePayers(tenantContext, request);
   }
 }

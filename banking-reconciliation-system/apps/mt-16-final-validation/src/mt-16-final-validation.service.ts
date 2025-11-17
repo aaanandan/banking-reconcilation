@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   MatchDto,
   ValidationRequestDto,
@@ -36,6 +36,8 @@ import {
  */
 @Injectable()
 export class Mt16FinalValidationService {
+  private readonly logger = new Logger(Mt16FinalValidationService.name);
+
   // Validation thresholds
   private readonly MIN_CONFIDENCE_THRESHOLD = 0.7; // 70%
   private readonly FUTURE_DATE_TOLERANCE_DAYS = 1; // Allow 1 day in future
@@ -49,7 +51,12 @@ export class Mt16FinalValidationService {
    * 3. Review confidence scores
    * 4. Generate validation report
    */
-  validateMatches(request: ValidationRequestDto): ValidationResponseDto {
+  validateMatches(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    request: ValidationRequestDto,
+  ): ValidationResponseDto {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Running MT-16 matching algorithm`);
+
     const issues: ValidationIssueDto[] = [];
     const { matches } = request;
 

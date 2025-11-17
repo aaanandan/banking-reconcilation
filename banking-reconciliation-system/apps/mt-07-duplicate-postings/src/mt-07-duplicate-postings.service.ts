@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { TransactionDto } from '@app/shared';
 import {
   DuplicateClassificationDto,
@@ -33,6 +33,8 @@ import {
  */
 @Injectable()
 export class Mt07DuplicatePostingsService {
+  private readonly logger = new Logger(Mt07DuplicatePostingsService.name);
+
   // Duplicate detection thresholds
   private readonly MAX_TIME_DIFFERENCE_HOURS = 24; // Within 24 hours
   private readonly MIN_DESCRIPTION_SIMILARITY = 0.8; // 80% similarity
@@ -47,8 +49,11 @@ export class Mt07DuplicatePostingsService {
    * 4. Return classification results
    */
   classifyDuplicates(
+    tenantContext: { tenantId: string; userId: string; role: string },
     request: DuplicateClassificationRequestDto,
   ): DuplicateClassificationResponseDto {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Running MT-07 matching algorithm`);
+
     const classifications: DuplicateClassificationDto[] = [];
     const duplicateGroups: Map<string, number[]> = new Map();
 

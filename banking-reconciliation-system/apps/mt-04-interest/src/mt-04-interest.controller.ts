@@ -5,6 +5,7 @@ import {
   InterestClassificationRequestDto,
   InterestClassificationResponseDto,
 } from './dto/classification.dto';
+import { TenantContext } from '@app/shared';
 
 /**
  * MT-04 Interest Credits Controller
@@ -43,8 +44,9 @@ export class Mt04InterestController {
     type: InterestClassificationResponseDto,
   })
   classifyInterest(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body() request: InterestClassificationRequestDto,
   ): InterestClassificationResponseDto {
-    return this.mt04Service.classifyInterest(request);
+    return this.mt04Service.classifyInterest(tenantContext, request);
   }
 }

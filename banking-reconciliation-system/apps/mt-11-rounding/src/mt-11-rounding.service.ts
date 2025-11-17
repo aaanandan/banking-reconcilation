@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { TransactionDto } from '@app/shared';
 import {
   RoundingClassificationDto,
@@ -31,6 +31,8 @@ import {
  */
 @Injectable()
 export class Mt11RoundingService {
+  private readonly logger = new Logger(Mt11RoundingService.name);
+
   // Rounding-related keywords
   private readonly ROUNDING_KEYWORDS = [
     'rounding',
@@ -58,8 +60,11 @@ export class Mt11RoundingService {
    * 3. Classify transactions
    */
   classifyRoundingDifferences(
+    tenantContext: { tenantId: string; userId: string; role: string },
     request: RoundingClassificationRequestDto,
   ): RoundingClassificationResponseDto {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Running MT-11 matching algorithm`);
+
     const threshold =
       request.roundingThreshold ?? this.DEFAULT_ROUNDING_THRESHOLD;
     const classifications: RoundingClassificationDto[] = [];

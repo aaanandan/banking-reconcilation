@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { TransactionDto } from '@app/shared';
 import {
   InterestClassificationDto,
@@ -31,6 +31,8 @@ import {
  */
 @Injectable()
 export class Mt04InterestService {
+  private readonly logger = new Logger(Mt04InterestService.name);
+
   // Interest keywords (common patterns)
   private readonly INTEREST_KEYWORDS = [
     'interest',
@@ -74,8 +76,11 @@ export class Mt04InterestService {
    * 6. Return classification result
    */
   classifyInterest(
+    tenantContext: { tenantId: string; userId: string; role: string },
     request: InterestClassificationRequestDto,
   ): InterestClassificationResponseDto {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Running MT-04 matching algorithm`);
+
     const classifications: InterestClassificationDto[] = [];
     let totalInterestAmount = 0;
 

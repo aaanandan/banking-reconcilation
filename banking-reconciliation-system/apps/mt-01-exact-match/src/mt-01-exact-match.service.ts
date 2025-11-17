@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { TransactionDto } from '@app/shared';
 import { MatchCandidateDto, MatchRequestDto, MatchResponseDto } from './dto/match.dto';
 
@@ -9,6 +9,8 @@ import { MatchCandidateDto, MatchRequestDto, MatchResponseDto } from './dto/matc
  */
 @Injectable()
 export class Mt01ExactMatchService {
+  private readonly logger = new Logger(Mt01ExactMatchService.name);
+
   /**
    * Find exact matches between bank and ledger transactions
    * Step 23-24: Exact match algorithm with multi-bank support
@@ -28,7 +30,12 @@ export class Mt01ExactMatchService {
    * - Matches preserve bankId/bankName for traceability
    * - Each bank transaction matched independently
    */
-  findExactMatches(request: MatchRequestDto): MatchResponseDto {
+  findExactMatches(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    request: MatchRequestDto,
+  ): MatchResponseDto {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Running MT-01 matching algorithm`);
+
     const matches: MatchCandidateDto[] = [];
     const { bankTransactions, ledgerTransactions } = request;
 

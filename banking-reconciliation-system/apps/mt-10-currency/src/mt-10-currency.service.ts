@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { TransactionDto } from '@app/shared';
 import {
   CurrencyClassificationDto,
@@ -32,6 +32,8 @@ import {
  */
 @Injectable()
 export class Mt10CurrencyService {
+  private readonly logger = new Logger(Mt10CurrencyService.name);
+
   // Currency-related keywords
   private readonly CURRENCY_KEYWORDS = [
     'currency',
@@ -64,8 +66,11 @@ export class Mt10CurrencyService {
    * 4. Classify transactions
    */
   classifyCurrencyConversions(
+    tenantContext: { tenantId: string; userId: string; role: string },
     request: CurrencyClassificationRequestDto,
   ): CurrencyClassificationResponseDto {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Running MT-10 matching algorithm`);
+
     const classifications: CurrencyClassificationDto[] = [];
     const uniqueCurrencies = new Set<string>();
 
