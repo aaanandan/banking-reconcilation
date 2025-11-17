@@ -333,7 +333,11 @@ export class MatchOrchestratorService {
    * @param reconciliationId - Unique ID for reconciliation
    * @returns Progress update or null if not found
    */
-  getProgress(reconciliationId: string): ProgressUpdateDto | null {
+  getProgress(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    reconciliationId: string,
+  ): ProgressUpdateDto | null {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Getting progress for ${reconciliationId}`);
     return this.progressStore.get(reconciliationId) || null;
   }
 
@@ -361,12 +365,14 @@ export class MatchOrchestratorService {
    * @returns Combined matches and metadata
    */
   async orchestrateReconciliation(
+    tenantContext: { tenantId: string; userId: string; role: string },
     request: ReconciliationRequestDto,
     reconciliationId?: string,
   ): Promise<any> {
     // Generate reconciliation ID if not provided
     const reconId = reconciliationId || `recon_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Orchestrating reconciliation ${reconId}`);
     this.logger.log(
       `Starting reconciliation workflow [${reconId}] with ${request.bankTransactions.length} bank txns, ${request.ledgerTransactions.length} ledger txns`,
     );

@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Body, Param, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { TenantContext } from '@app/shared';
 import { MatchOrchestratorService } from './match-orchestrator.service';
 import { ReconciliationRequestDto, ProgressUpdateDto } from './dto/reconciliation.dto';
 
@@ -35,10 +36,17 @@ export class MatchOrchestratorController {
   @ApiResponse({ status: 200, description: 'Reconciliation complete' })
   @ApiResponse({ status: 400, description: 'Invalid request payload' })
   @ApiResponse({ status: 500, description: 'Internal server error or service unavailable' })
-  async reconcile(@Body() request: ReconciliationRequestDto): Promise<any> {
+  async reconcile(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
+    @Body() request: ReconciliationRequestDto,
+  ): Promise<any> {
     // Generate unique reconciliation ID for progress tracking
     const reconciliationId = `recon_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-    return this.matchOrchestratorService.orchestrateReconciliation(request, reconciliationId);
+    return this.matchOrchestratorService.orchestrateReconciliation(
+      tenantContext,
+      request,
+      reconciliationId,
+    );
   }
 
   @Get('progress/:reconciliationId')
@@ -58,8 +66,11 @@ export class MatchOrchestratorController {
     type: ProgressUpdateDto,
   })
   @ApiResponse({ status: 404, description: 'Reconciliation ID not found' })
-  getProgress(@Param('reconciliationId') reconciliationId: string): ProgressUpdateDto {
-    const progress = this.matchOrchestratorService.getProgress(reconciliationId);
+  getProgress(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
+    @Param('reconciliationId') reconciliationId: string,
+  ): ProgressUpdateDto {
+    const progress = this.matchOrchestratorService.getProgress(tenantContext, reconciliationId);
 
     if (!progress) {
       throw new NotFoundException(
