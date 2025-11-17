@@ -6,3 +6,4 @@ export * from './utils';
 export * from './constants';
 export * from './decorators/tenant-context.decorator';
 export * from './middleware/tenant-isolation.middleware';
+export * from './repositories/tenant-aware.repository';
