@@ -4,9 +4,7 @@ import { Register } from './pages/Register/Register';
 import { MainLayout } from './components/Layout/MainLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Dashboard } from './pages/Dashboard/Dashboard';
-
-// Placeholder components (will be replaced in later steps)
-const UploadFiles = () => <div>Upload Files Page</div>;
+import { UploadFiles } from './pages/Reconciliation/UploadFiles';
 
 export const router = createBrowserRouter([
   {
