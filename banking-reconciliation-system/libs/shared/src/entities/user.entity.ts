@@ -7,7 +7,10 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  ManyToOne,
+  Index,
 } from 'typeorm';
+import { Tenant } from './tenant.entity';
 import { Reconciliation } from './reconciliation.entity';
 import { UserFeedback } from './user-feedback.entity';
 
@@ -15,6 +18,17 @@ import { UserFeedback } from './user-feedback.entity';
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  // ═══════════════════════════════════════════════════════════
+  // MULTI-TENANCY
+  // ═══════════════════════════════════════════════════════════
+  @Column()
+  @Index()
+  tenantId: string;
+
+  @ManyToOne(() => Tenant, tenant => tenant.users)
+  tenant: Tenant;
+  // ═══════════════════════════════════════════════════════════
 
   @Column({ unique: true })
   email: string;
