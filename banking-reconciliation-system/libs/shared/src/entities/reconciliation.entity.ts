@@ -10,7 +10,9 @@ import {
   OneToOne,
   JoinColumn,
   ManyToOne,
+  Index,
 } from 'typeorm';
+import { Tenant } from './tenant.entity';
 import { BankFile } from './bank-file.entity';
 import { LedgerFile } from './ledger-file.entity';
 import { Transaction } from './transaction.entity';
@@ -22,6 +24,17 @@ import { User } from './user.entity';
 export class Reconciliation {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  // ═══════════════════════════════════════════════════════════
+  // MULTI-TENANCY
+  // ═══════════════════════════════════════════════════════════
+  @Column()
+  @Index()
+  tenantId: string;
+
+  @ManyToOne(() => Tenant, tenant => tenant.reconciliations)
+  tenant: Tenant;
+  // ═══════════════════════════════════════════════════════════
 
   @Column()
   userId: string;
