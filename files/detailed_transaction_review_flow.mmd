@@ -1,0 +1,212 @@
+sequenceDiagram
+    participant U as User
+    participant UI as UI Service
+    participant SM as State Manager
+    participant TIC as Threshold Impact<br/>Calculator
+    participant MT2 as MT-02<br/>(Near-Exact)
+    participant MT5 as MT-05<br/>(Split Payments)
+    participant MT9 as MT-09<br/>(Timing Diff)
+    participant MT12 as MT-12<br/>(High-Vol Payer)
+    participant ORC as Orchestrator
+    participant LS as Learning Service
+    participant SR as Safety Service
+
+    %% ═══════════════════════════════════════════════════════════
+    %% CONTEXT: User is reviewing Step 5, Transaction #127
+    %% ═══════════════════════════════════════════════════════════
+    
+    Note over U,LS: USER VIEWING: Step 5 (Split Payments)<br/>Transaction: Bank #127 ($1,000, Jan 15, "Multiple Invoices")
+
+    %% ═══════════════════════════════════════════════════════════
+    %% PHASE 1: LOAD TRANSACTION CONTEXT
+    %% ═══════════════════════════════════════════════════════════
+    
+    U->>UI: View Transaction #127 in Step 5
+    
+    UI->>SM: get_transaction_details(txn_id: 127)
+    SM-->>UI: {<br/>  bank_id: 127,<br/>  amount: 1000,<br/>  date: "2025-01-15",<br/>  description: "Multiple Invoices",<br/>  payer: "ABC Corp",<br/>  status: "pending_review",<br/>  current_step: 5<br/>}
+    
+    UI->>SM: get_current_thresholds()
+    SM-->>UI: {<br/>  step_1: {date: 0, amount: 0, desc: 1.0},<br/>  step_2: {date: 1, amount: 5, desc: 0.85},<br/>  step_5: {date: 2, amount: 0, desc: 0.75},<br/>  ...<br/>}
+
+    %% ═══════════════════════════════════════════════════════════
+    %% PHASE 2: THRESHOLD IMPACT CALCULATION (HEAVY)
+    %% ═══════════════════════════════════════════════════════════
+    
+    UI->>TIC: calculate_full_impact({<br/>  current_step: 5,<br/>  current_txn: 127,<br/>  all_remaining_txns: [127, 130, 145, ...],<br/>  current_thresholds: {...},<br/>  calculate_for_steps: [1..16]<br/>})
+    
+    Note over TIC: TIC orchestrates calls to ALL matching services<br/>with current AND modified thresholds
+    
+    %% ─────────────────────────────────────────────────────────
+    %% CURRENT STEP (Step 5) - Split Payments
+    %% ─────────────────────────────────────────────────────────
+    
+    TIC->>MT5: find_matches({<br/>  txns: [127],<br/>  thresholds: {date: 2, amount: 0, desc: 0.75},<br/>  mode: "current"<br/>})
+    
+    MT5->>MT5: Search for split combinations<br/>$1000 = Ledger_X + Ledger_Y
+    
+    MT5-->>TIC: {<br/>  candidates: [<br/>    {<br/>      ledger_ids: [45, 67],<br/>      amounts: [600, 400],<br/>      confidence: 0.85,<br/>      reasoning: "exact_split_sum"<br/>    }<br/>  ]<br/>}
+    
+    %% ─────────────────────────────────────────────────────────
+    %% EARLIER STEPS - RETROACTIVE THRESHOLD MODIFICATION
+    %% ─────────────────────────────────────────────────────────
+    
+    Note over TIC,MT2: Calculate impact of modifying earlier steps
+    
+    TIC->>MT2: find_matches({<br/>  txns: [127],<br/>  thresholds: {<br/>    date: 3,  ← Modified from 1 to 3<br/>    amount: 5,<br/>    desc: 0.85<br/>  },<br/>  mode: "alternative"<br/>})
+    
+    MT2->>MT2: Search with relaxed date threshold
+    
+    MT2-->>TIC: {<br/>  candidates: [<br/>    {<br/>      ledger_id: 52,<br/>      amount: 1000,<br/>      date: "2025-01-12",  ← 3 days earlier<br/>      description: "ABC Corp Monthly",<br/>      confidence: 0.95,<br/>      date_offset: -3,<br/>      reasoning: "near_exact_with_date_shift"<br/>    }<br/>  ]<br/>}
+    
+    %% Calculate cascade impact
+    TIC->>TIC: analyze_cascade_impact({<br/>  if_match_127_to_52: {<br/>    frees_ledger: [45, 67],<br/>    affects_bank_txns: [130, 145]<br/>  }<br/>})
+    
+    %% ─────────────────────────────────────────────────────────
+    %% FUTURE STEPS - PREVIEW IMPACT
+    %% ─────────────────────────────────────────────────────────
+    
+    Note over TIC,MT9: Calculate impact on future steps
+    
+    TIC->>MT9: find_matches({<br/>  txns: [all_remaining],  ← ALL pending txns<br/>  thresholds: {current},<br/>  mode: "preview"<br/>})
+    
+    MT9-->>TIC: {<br/>  affected_by_127: {<br/>    if_split_approved: {<br/>      candidate_count: 12,  ← Current<br/>      new_candidate_count: 9  ← After split<br/>    },<br/>    if_matched_in_step2: {<br/>      candidate_count: 15  ← Ledger 45,67 available<br/>    }<br/>  }<br/>}
+    
+    TIC->>MT12: find_matches({<br/>  txns: [all_remaining],<br/>  thresholds: {current},<br/>  mode: "preview"<br/>})
+    
+    MT12-->>TIC: {<br/>  affected_by_127: {<br/>    bank_130_better_match_if_ledger_45_free: true<br/>  }<br/>}
+    
+    %% ═══════════════════════════════════════════════════════════
+    %% PHASE 3: AGGREGATE AND RETURN RESULTS
+    %% ═══════════════════════════════════════════════════════════
+    
+    TIC->>TIC: Aggregate all results into flat list
+    
+    TIC-->>UI: {<br/>  current_step_suggestions: [<br/>    {<br/>      step: 5,<br/>      type: "split_payment",<br/>      ledger_ids: [45, 67],<br/>      confidence: 0.85,<br/>      reasoning: "exact_split_sum"<br/>    }<br/>  ],<br/>  alternative_paths: [<br/>    {<br/>      modify_step: 2,<br/>      change: {<br/>        threshold: "date",<br/>        from: 1,<br/>        to: 3<br/>      },<br/>      result: {<br/>        ledger_id: 52,<br/>        confidence: 0.95,<br/>        reasoning: "near_exact_with_date_shift"<br/>      },<br/>      impact: {<br/>        frees_ledger: [45, 67],<br/>        enables_better_matches: [130, 145]<br/>      }<br/>    }<br/>  ],<br/>  future_impact: [<br/>    {<br/>      step: 9,<br/>      current_candidates: 12,<br/>      if_split_approved: 9,<br/>      if_alternative_used: 15<br/>    },<br/>    {<br/>      step: 12,<br/>      note: "Bank #130 gets better match if Ledger #45 freed"<br/>    }<br/>  ]<br/>}
+
+    %% ═══════════════════════════════════════════════════════════
+    %% PHASE 4: UI PRESENTATION
+    %% ═══════════════════════════════════════════════════════════
+    
+    UI-->>U: Display Results:<br/>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━<br/>✓ CURRENT MATCH (Step 5)<br/>  Split: Ledger #45 + #67 (85%)<br/>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━<br/>⚠️ ALTERNATIVE PATH<br/>  Modify Step 2 date ±1→±3<br/>  Match to Ledger #52 (95%)<br/>  Frees Ledger #45, #67<br/>  [Apply Alternative]<br/>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━<br/>ℹ️ FUTURE IMPACT<br/>  Step 9: 12→9 candidates<br/>  Step 12: Better match for #130
+
+    %% ═══════════════════════════════════════════════════════════
+    %% PHASE 5: USER DECISION - USES ALTERNATIVE PATH
+    %% ═══════════════════════════════════════════════════════════
+    
+    U->>UI: Click "Apply Alternative"
+    
+    UI->>SR: validate_threshold_change({<br/>  step: 2,<br/>  threshold: "date",<br/>  new_value: 3,<br/>  affected_txns: [127]<br/>})
+    
+    SR->>SR: Check if txn #127 is high-value<br/>Check safety constraints
+    
+    SR-->>UI: {<br/>  safe: true,<br/>  warnings: []<br/>}
+    
+    %% ═══════════════════════════════════════════════════════════
+    %% PHASE 6: IMMEDIATE RE-RUN (Steps 2-5)
+    %% ═══════════════════════════════════════════════════════════
+    
+    UI->>SM: update_threshold({<br/>  step: 2,<br/>  threshold: "date",<br/>  value: 3<br/>})
+    
+    SM-->>UI: {threshold_updated: true}
+    
+    UI->>ORC: re_run_steps({<br/>  steps: [2, 3, 4, 5],<br/>  reason: "threshold_change_step_2",<br/>  affected_txns: [127, "all_pending"]<br/>})
+    
+    Note over ORC: Orchestrator re-executes Steps 2-5<br/>with new threshold
+    
+    ORC->>MT2: find_matches({<br/>  txns: [all_pending],<br/>  thresholds: {date: 3, ...},  ← Updated<br/>  mode: "rerun"<br/>})
+    
+    MT2-->>ORC: {<br/>  new_matches: [<br/>    {bank: 127, ledger: 52, confidence: 0.95}<br/>  ]<br/>}
+    
+    ORC->>SM: stage_match({<br/>  bank: 127,<br/>  ledger: 52,<br/>  step: 2,<br/>  confidence: 0.95,<br/>  pending_user_approval: true<br/>})
+    
+    SM-->>ORC: {staged: true}
+    
+    ORC->>UI: update_results({<br/>  txn_127: {<br/>    new_suggestion: {<br/>      step: 2,<br/>      ledger: 52,<br/>      confidence: 0.95<br/>    },<br/>    previous_suggestion_invalidated: true<br/>  }<br/>})
+    
+    UI-->>U: 🔄 UPDATED<br/>Transaction #127 now in Step 2<br/>New match: Ledger #52 (95%)<br/>[Approve] [View Details]
+
+    %% ═══════════════════════════════════════════════════════════
+    %% PHASE 7: USER APPROVES NEW MATCH
+    %% ═══════════════════════════════════════════════════════════
+    
+    U->>UI: Approve Match
+    
+    UI->>SM: commit_match({<br/>  bank: 127,<br/>  ledger: 52,<br/>  step: 2,<br/>  user_approved: true,<br/>  timestamp: "2025-11-15T10:30:00Z"<br/>})
+    
+    SM-->>UI: {<br/>  committed: true,<br/>  txn_127_status: "matched",<br/>  ledger_52_status: "consumed"<br/>}
+
+    %% ═══════════════════════════════════════════════════════════
+    %% PHASE 8: LEARNING SERVICE ANALYSIS
+    %% ═══════════════════════════════════════════════════════════
+    
+    UI->>LS: record_user_action({<br/>  txn: 127,<br/>  action: "threshold_change_then_approve",<br/>  details: {<br/>    original_suggestion: {step: 5, confidence: 0.85},<br/>    threshold_changed: {step: 2, param: "date", from: 1, to: 3},<br/>    final_match: {step: 2, ledger: 52, confidence: 0.95},<br/>    payer: "ABC Corp",<br/>    date_offset: -3<br/>  }<br/>})
+    
+    LS->>LS: Pattern Analysis:<br/>1. Extract features<br/>2. Check history for similar patterns<br/>3. Calculate weight
+    
+    LS->>LS: Search pattern history for "ABC Corp"
+    
+    LS-->>LS: Found 3 previous instances:<br/>- All had -2 to -3 day offset<br/>- All required date threshold ±3<br/>- All were Step 2 matches
+    
+    LS->>LS: Calculate Weight:<br/>frequency: 4/4 = 100% → +50<br/>consistency: 100% → +30<br/>recency: last_seen_today → +20<br/>━━━━━━━━━━━━━━━━━━━━<br/>Total Weight: 100 → HIGH
+    
+    alt Weight >= 80 (AUTO-APPLY RULE)
+        LS->>ORC: update_ml_model({<br/>  rule: {<br/>    id: "ABC_Corp_date_offset",<br/>    condition: {payer: "ABC Corp"},<br/>    action: {<br/>      prefer_step: 2,<br/>      threshold: {date: 3},<br/>      expected_offset: -3<br/>    },<br/>    weight: 100,<br/>    auto_apply: true<br/>  }<br/>})
+        
+        ORC->>ORC: Update ML model<br/>Add rule to decision tree
+        
+        ORC-->>LS: {model_updated: true, rule_id: "R_001"}
+        
+        LS->>UI: notify_learning({<br/>  message: "Rule created: ABC Corp transactions use ±3 day threshold",<br/>  rule_id: "R_001"<br/>})
+        
+        UI-->>U: 💡 System Learned:<br/>"ABC Corp transactions typically<br/>post 3 days early in bank"<br/>[View Rule] [Dismiss]
+    end
+
+    %% ═══════════════════════════════════════════════════════════
+    %% PHASE 9: FULL RE-ORCHESTRATION FOR REMAINING TRANSACTIONS
+    %% ═══════════════════════════════════════════════════════════
+    
+    LS->>ORC: trigger_reorchestration({<br/>  reason: "ml_model_updated",<br/>  scope: "all_remaining"<br/>})
+    
+    ORC->>SM: get_unmatched_transactions()
+    SM-->>ORC: {unmatched: [130, 145, 178, ...]}
+    
+    ORC->>ORC: Apply updated ML model<br/>Recalculate step sequence<br/>for remaining transactions
+    
+    Note over ORC: Orchestrator now knows:<br/>- ABC Corp → Use Step 2, date ±3<br/>- Ledger #45, #67 now available<br/>- Re-prioritize steps based on new state
+    
+    ORC->>MT12: find_matches({<br/>  txns: [130],  ← Benefits from freed ledgers<br/>  thresholds: {current},<br/>  available_ledgers: [45, 67, ...]  ← Now includes freed<br/>})
+    
+    MT12-->>ORC: {<br/>  new_match: {<br/>    bank: 130,<br/>    ledger: 45,<br/>    confidence: 0.92,<br/>    reasoning: "high_volume_payer_pattern"<br/>  }<br/>}
+    
+    ORC->>UI: update_all_suggestions({<br/>  new_suggestions: [<br/>    {txn: 130, ledger: 45, step: 12, confidence: 0.92}<br/>  ],<br/>  total_remaining: 46  ← Was 47, now 46 after #127<br/>})
+    
+    UI-->>U: 🔄 Suggestions Updated<br/>✅ Transaction #127 committed<br/>💡 New match found for #130<br/>⏳ 46 transactions remaining
+
+    %% ═══════════════════════════════════════════════════════════
+    %% PHASE 10: OPTIONAL - LEARNING SERVICE ASKS QUESTION
+    %% ═══════════════════════════════════════════════════════════
+    
+    Note over LS,U: Example: If weight was 40-79 (MEDIUM)<br/>or user behavior was ambiguous
+    
+    rect rgb(255, 250, 240)
+        Note over LS,U: ALTERNATIVE SCENARIO - Learning Question
+        
+        LS->>LS: Weight = 65 (MEDIUM)<br/>Pattern seen 2 times only<br/>Need user confirmation
+        
+        LS->>UI: ask_clarification({<br/>  question: "Should I apply ±3 day threshold for ABC Corp?",<br/>  context: {<br/>    pattern: "ABC Corp: -3 day offset",<br/>    occurrences: 2,<br/>    confidence: "medium"<br/>  },<br/>  options: ["Create Rule", "Not Yet", "Never"]<br/>})
+        
+        UI-->>U: 🤔 LEARNING QUESTION<br/>━━━━━━━━━━━━━━━━━━━━━━━━━<br/>I noticed ABC Corp transactions<br/>consistently appear 3 days early.<br/><br/>Should I create a rule?<br/>[Create Rule] [Not Yet] [Never]
+        
+        U->>UI: Click "Create Rule"
+        
+        UI->>LS: user_response({<br/>  decision: "create_rule",<br/>  context_id: "Q_ABC_001"<br/>})
+        
+        LS->>LS: Boost weight to 100<br/>(user confirmation)
+        
+        LS->>ORC: update_ml_model({<br/>  rule: {...},<br/>  weight: 100,<br/>  user_confirmed: true<br/>})
+        
+        ORC-->>LS: {model_updated: true}
+    end
+
+    Note over U,LS: Transaction #127 review complete<br/>System learned and adapted<br/>Ready for next transaction

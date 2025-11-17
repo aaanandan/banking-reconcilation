@@ -1,0 +1,162 @@
+sequenceDiagram
+    participant U as User
+    participant UI as UI Service
+    participant DP as Data Prep Service
+    participant SM as State Manager
+    participant ORC as Orchestrator Service<br/>(ML-Driven)
+    participant TIC as Threshold Impact<br/>Calculator
+    participant MT as Matching Services<br/>(MT-01..MT-16)
+    participant SR as Safety Service
+    participant LS as Learning Service
+
+    %% ═══════════════════════════════════════════════════════════
+    %% PHASE 1: DATA UPLOAD & PREPARATION
+    %% ═══════════════════════════════════════════════════════════
+    
+    U->>UI: Upload Bank + Ledger Files
+    UI->>DP: validate_and_prepare(bank_file, ledger_file)
+    
+    DP->>DP: Clean, Normalize, Validate
+    DP-->>UI: {status: "ready", total_txns: 500, diagnostics: {...}}
+    
+    UI->>SM: initialize_state(total_txns: 500)
+    SM-->>UI: {state_id: "recon_001", all_txns: "unmatched"}
+    
+    UI-->>U: ✅ Ready - 500 transactions loaded
+
+    %% ═══════════════════════════════════════════════════════════
+    %% PHASE 2: ORCHESTRATOR INITIALIZATION
+    %% ═══════════════════════════════════════════════════════════
+    
+    U->>UI: Start Reconciliation
+    UI->>ORC: start_reconciliation(state_id: "recon_001")
+    
+    ORC->>ORC: Load ML Model<br/>Determine Step Sequence
+    ORC->>SM: get_unmatched_transactions()
+    SM-->>ORC: {unmatched_txns: [1..500]}
+
+    %% ═══════════════════════════════════════════════════════════
+    %% PHASE 3: EXACT MATCH AUTO-COMMIT (Step 1)
+    %% ═══════════════════════════════════════════════════════════
+    
+    ORC->>MT: MT-01.exact_match(txns: [1..500], thresholds: {strict})
+    MT-->>ORC: {matched: 450, candidates: [{bank_id, ledger_id}...]}
+    
+    ORC->>SR: validate_auto_commit(matched: 450)
+    SR->>SR: Check High-Value<br/>Check High-Volume
+    SR-->>ORC: {safe_to_commit: 445, require_review: 5}
+    
+    ORC->>SM: commit_matches(txn_ids: [1..445], type: "exact")
+    SM-->>ORC: {committed: 445, status: "success"}
+    
+    ORC->>SM: flag_for_review(txn_ids: [446..450], reason: "high_value")
+    SM-->>ORC: {flagged: 5}
+    
+    ORC->>UI: update_progress({committed: 445, flagged: 5, remaining: 50})
+    UI-->>U: 🎯 445 Exact Matches Auto-Committed<br/>⚠️ 5 High-Value Need Review<br/>⏳ 50 Pending
+
+    %% ═══════════════════════════════════════════════════════════
+    %% PHASE 4: REMAINING STEPS ORCHESTRATION
+    %% ═══════════════════════════════════════════════════════════
+    
+    ORC->>ORC: ML determines next step: MT-07<br/>(Duplicate Postings - high confidence)
+    
+    ORC->>SM: get_unmatched_transactions()
+    SM-->>ORC: {unmatched_txns: [451..500]}
+    
+    ORC->>MT: MT-07.duplicate_postings(txns: [451..500], thresholds: {...})
+    MT-->>ORC: {matched: 8, candidates: [...]}
+    
+    ORC->>SM: commit_matches(txn_ids: [...], type: "duplicate")
+    SM-->>ORC: {committed: 8}
+    
+    ORC->>UI: update_progress({total_committed: 453, remaining: 47})
+    UI-->>U: ✅ 453 Matched | ⏳ 47 Remaining
+
+    Note over ORC,MT: Orchestrator continues through<br/>MT-02, MT-03, MT-04... MT-16<br/>based on ML-learned sequence
+
+    %% ═══════════════════════════════════════════════════════════
+    %% PHASE 5: USER REVIEW LOOP (DETAILED IN SUB-DIAGRAM)
+    %% ═══════════════════════════════════════════════════════════
+    
+    rect rgb(240, 248, 255)
+        Note over U,LS: USER REVIEW PHASE - See Detailed Sub-Diagram
+        
+        ORC->>UI: present_for_review({step: 5, txn: 127, suggestions: [...]})
+        UI-->>U: Show Step 5 - Transaction #127<br/>✓ Current Match | ⚠️ Alternatives
+        
+        U->>UI: Approve / Override / Modify Threshold
+        
+        alt User Approves
+            UI->>SM: commit_match(txn: 127, ledger: 45, user_approved: true)
+            SM-->>UI: {committed: true}
+        else User Overrides
+            UI->>SM: commit_match(txn: 127, ledger: 52, override: true, reason: "...")
+            SM-->>UI: {committed: true}
+        else User Modifies Threshold
+            UI->>TIC: recalculate_with_threshold(step: 2, new_threshold: {...})
+            Note right of TIC: Full recalculation triggered<br/>(See Detailed Sub-Diagram)
+            TIC-->>UI: {updated_suggestions: [...]}
+        end
+        
+        %% LEARNING SERVICE UPDATE
+        UI->>LS: record_user_action({<br/>  txn: 127,<br/>  action: "override",<br/>  chosen_ledger: 52,<br/>  rejected_suggestion: 45,<br/>  reason: "description_match"<br/>})
+        
+        LS->>LS: Analyze Pattern<br/>Calculate Weight<br/>(freq + consistency + recency)
+        
+        alt Weight >= 80 (HIGH Confidence)
+            LS->>ORC: update_ml_model({<br/>  rule: "payer_ABC_date_offset_-2",<br/>  weight: 95,<br/>  auto_apply: true<br/>})
+            ORC-->>LS: {model_updated: true}
+            
+        else Weight 40-79 (MEDIUM - Queue for Reuse)
+            LS->>LS: Store as candidate_rule<br/>Wait for more occurrences
+            
+        else Weight < 40 (LOW - Ask User)
+            LS->>UI: ask_clarification({<br/>  question: "Should I apply this pattern?",<br/>  context: {...}<br/>})
+            UI-->>U: 🤔 Learning Question:<br/>"Apply -2 day offset for ABC Corp?"
+            U->>UI: [Create Rule] / [Not Yet] / [Never]
+            UI->>LS: user_response({decision: "create_rule"})
+            LS->>ORC: update_ml_model({rule: "...", weight: 100})
+        end
+        
+        %% RE-ORCHESTRATION
+        LS->>ORC: trigger_reorchestration()
+        ORC->>SM: get_unmatched_transactions()
+        SM-->>ORC: {unmatched_txns: [remaining]}
+        
+        ORC->>MT: Re-run steps with updated ML model
+        MT-->>ORC: {new_suggestions: [...]}
+        
+        ORC->>UI: update_all_suggestions()
+        UI-->>U: 🔄 Updated - New suggestions available
+    end
+
+    %% ═══════════════════════════════════════════════════════════
+    %% PHASE 6: CONVERGENCE LOOP
+    %% ═══════════════════════════════════════════════════════════
+    
+    loop Until 100% Coverage
+        ORC->>SM: get_reconciliation_status()
+        SM-->>ORC: {<br/>  committed: 485,<br/>  pending_review: 12,<br/>  no_match: 3,<br/>  total: 500<br/>}
+        
+        alt Coverage < 100%
+            ORC->>UI: next_review_item()
+            UI-->>U: Transaction #X needs review
+            Note over U,LS: User reviews → Learning loop repeats
+        else Coverage = 100%
+            ORC->>ORC: Exit Loop
+        end
+    end
+
+    %% ═══════════════════════════════════════════════════════════
+    %% PHASE 7: FINAL VALIDATION & REPORT
+    %% ═══════════════════════════════════════════════════════════
+    
+    ORC->>SM: final_validation()
+    SM->>SM: Verify all transactions<br/>accounted for
+    SM-->>ORC: {<br/>  committed: 495,<br/>  manual_classified: 5,<br/>  total: 500,<br/>  coverage: 100%<br/>}
+    
+    ORC->>UI: generate_final_report()
+    UI-->>U: ✅ Reconciliation Complete<br/>━━━━━━━━━━━━━━━━━━━━━━<br/>✅ 495 Matched & Committed<br/>📋 5 Manual Classifications<br/>📊 100% Coverage Achieved
+    
+    U->>UI: Download Report / Export Results
