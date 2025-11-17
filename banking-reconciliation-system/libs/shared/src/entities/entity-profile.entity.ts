@@ -17,6 +17,14 @@ export class EntityProfile {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  // ═══════════════════════════════════════════════════════════
+  // MULTI-TENANCY
+  // ═══════════════════════════════════════════════════════════
+  @Column()
+  @Index()
+  tenantId: string;
+  // ═══════════════════════════════════════════════════════════
+
   @Column({ unique: true })
   entityId: string;  // Unique identifier for the payer/payee
 
