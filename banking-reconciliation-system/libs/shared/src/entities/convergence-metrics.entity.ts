@@ -16,6 +16,14 @@ export class ConvergenceMetrics {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  // ═══════════════════════════════════════════════════════════
+  // MULTI-TENANCY
+  // ═══════════════════════════════════════════════════════════
+  @Column()
+  @Index()
+  tenantId: string;
+  // ═══════════════════════════════════════════════════════════
+
   @Column()
   @Index()
   reconciliationId: string;
