@@ -34,6 +34,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./apps/banking-reconciliation-system/test/jest-e2e.json",
+    "test:tenant": "DB_DATABASE=banking_recon_test jest test/",
     "migration:run": "typeorm-ts-node-commonjs migration:run -d data-source.ts",
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d data-source.ts",
     "migration:show": "typeorm-ts-node-commonjs migration:show -d data-source.ts"
