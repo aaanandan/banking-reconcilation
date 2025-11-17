@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Delete, Body, Param, Query, Put } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
+import { TenantContext } from '@app/shared';
 import { LearningServiceService } from './learning-service.service';
 import {
   RecordFeedbackDto,
@@ -53,8 +54,11 @@ export class LearningServiceController {
     type: FeedbackResponseDto,
   })
   @ApiResponse({ status: 400, description: 'Invalid request data' })
-  async recordFeedback(@Body() dto: RecordFeedbackDto): Promise<FeedbackResponseDto> {
-    return this.learningServiceService.recordFeedback(dto);
+  async recordFeedback(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
+    @Body() dto: RecordFeedbackDto,
+  ): Promise<FeedbackResponseDto> {
+    return this.learningServiceService.recordFeedback(tenantContext, dto);
   }
 
   @Get('feedback')
@@ -68,8 +72,11 @@ export class LearningServiceController {
     description: 'Feedback records retrieved',
     type: [FeedbackResponseDto],
   })
-  async getFeedback(@Query() query: GetFeedbackDto): Promise<FeedbackResponseDto[]> {
-    return this.learningServiceService.getFeedback(query);
+  async getFeedback(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
+    @Query() query: GetFeedbackDto,
+  ): Promise<FeedbackResponseDto[]> {
+    return this.learningServiceService.getFeedback(tenantContext, query);
   }
 
   @Get('feedback/:id')
@@ -81,8 +88,11 @@ export class LearningServiceController {
     type: FeedbackResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Feedback not found' })
-  async getFeedbackById(@Param('id') id: string): Promise<FeedbackResponseDto> {
-    return this.learningServiceService.getFeedbackById(parseInt(id, 10));
+  async getFeedbackById(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
+    @Param('id') id: string,
+  ): Promise<FeedbackResponseDto> {
+    return this.learningServiceService.getFeedbackById(tenantContext, parseInt(id, 10));
   }
 
   @Get('feedback/stats/:reconciliationId')
@@ -93,8 +103,11 @@ export class LearningServiceController {
     description: 'Feedback statistics retrieved',
     type: FeedbackStatsDto,
   })
-  async getFeedbackStats(@Param('reconciliationId') reconciliationId: string): Promise<FeedbackStatsDto> {
-    return this.learningServiceService.getFeedbackStats(reconciliationId);
+  async getFeedbackStats(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
+    @Param('reconciliationId') reconciliationId: string,
+  ): Promise<FeedbackStatsDto> {
+    return this.learningServiceService.getFeedbackStats(tenantContext, reconciliationId);
   }
 
   @Delete('feedback/:id')
@@ -102,8 +115,11 @@ export class LearningServiceController {
   @ApiParam({ name: 'id', description: 'Feedback ID' })
   @ApiResponse({ status: 200, description: 'Feedback deleted successfully' })
   @ApiResponse({ status: 404, description: 'Feedback not found' })
-  async deleteFeedback(@Param('id') id: string): Promise<{ success: boolean }> {
-    return this.learningServiceService.deleteFeedback(parseInt(id, 10));
+  async deleteFeedback(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
+    @Param('id') id: string,
+  ): Promise<{ success: boolean }> {
+    return this.learningServiceService.deleteFeedback(tenantContext, parseInt(id, 10));
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -118,8 +134,11 @@ export class LearningServiceController {
     type: EntityProfileResponseDto,
   })
   @ApiResponse({ status: 409, description: 'Entity profile already exists' })
-  async createProfile(@Body() dto: CreateEntityProfileDto): Promise<EntityProfileResponseDto> {
-    return this.learningServiceService.createProfile(dto);
+  async createProfile(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
+    @Body() dto: CreateEntityProfileDto,
+  ): Promise<EntityProfileResponseDto> {
+    return this.learningServiceService.createProfile(tenantContext, dto);
   }
 
   @Get('profile')
@@ -129,8 +148,10 @@ export class LearningServiceController {
     description: 'Entity profiles retrieved',
     type: [EntityProfileResponseDto],
   })
-  async getAllProfiles(): Promise<EntityProfileResponseDto[]> {
-    return this.learningServiceService.getAllProfiles();
+  async getAllProfiles(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
+  ): Promise<EntityProfileResponseDto[]> {
+    return this.learningServiceService.getAllProfiles(tenantContext);
   }
 
   @Get('profile/:entityId')
@@ -142,8 +163,11 @@ export class LearningServiceController {
     type: EntityProfileResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Entity profile not found' })
-  async getProfile(@Param('entityId') entityId: string): Promise<EntityProfileResponseDto> {
-    return this.learningServiceService.getProfile(entityId);
+  async getProfile(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
+    @Param('entityId') entityId: string,
+  ): Promise<EntityProfileResponseDto> {
+    return this.learningServiceService.getProfile(tenantContext, entityId);
   }
 
   @Put('profile/:entityId')
@@ -156,10 +180,11 @@ export class LearningServiceController {
   })
   @ApiResponse({ status: 404, description: 'Entity profile not found' })
   async updateProfile(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Param('entityId') entityId: string,
     @Body() dto: UpdateEntityProfileDto,
   ): Promise<EntityProfileResponseDto> {
-    return this.learningServiceService.updateProfile(entityId, dto);
+    return this.learningServiceService.updateProfile(tenantContext, entityId, dto);
   }
 
   @Delete('profile/:entityId')
@@ -167,8 +192,11 @@ export class LearningServiceController {
   @ApiParam({ name: 'entityId', description: 'Entity ID' })
   @ApiResponse({ status: 200, description: 'Entity profile deleted successfully' })
   @ApiResponse({ status: 404, description: 'Entity profile not found' })
-  async deleteProfile(@Param('entityId') entityId: string): Promise<{ success: boolean }> {
-    return this.learningServiceService.deleteProfile(entityId);
+  async deleteProfile(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
+    @Param('entityId') entityId: string,
+  ): Promise<{ success: boolean }> {
+    return this.learningServiceService.deleteProfile(tenantContext, entityId);
   }
 
   @Get('profile/:entityId/stats')
@@ -180,8 +208,11 @@ export class LearningServiceController {
     type: EntityProfileStatsDto,
   })
   @ApiResponse({ status: 404, description: 'Entity profile not found' })
-  async getProfileStats(@Param('entityId') entityId: string): Promise<EntityProfileStatsDto> {
-    return this.learningServiceService.getProfileStats(entityId);
+  async getProfileStats(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
+    @Param('entityId') entityId: string,
+  ): Promise<EntityProfileStatsDto> {
+    return this.learningServiceService.getProfileStats(tenantContext, entityId);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -198,10 +229,11 @@ export class LearningServiceController {
   })
   @ApiResponse({ status: 404, description: 'Entity profile not found' })
   async updateBankBehavior(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Param('entityId') entityId: string,
     @Body() dto: UpdateBankBehaviorDto,
   ): Promise<BankBehaviorResponseDto> {
-    return this.learningServiceService.updateBankBehavior(entityId, dto);
+    return this.learningServiceService.updateBankBehavior(tenantContext, entityId, dto);
   }
 
   @Get('profile/:entityId/bank-behavior/:bankId')
@@ -215,10 +247,11 @@ export class LearningServiceController {
   })
   @ApiResponse({ status: 404, description: 'Entity profile or bank behavior not found' })
   async getBankBehavior(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Param('entityId') entityId: string,
     @Param('bankId') bankId: string,
   ): Promise<BankBehaviorResponseDto> {
-    return this.learningServiceService.getBankBehavior(entityId, bankId);
+    return this.learningServiceService.getBankBehavior(tenantContext, entityId, bankId);
   }
 
   @Get('profile/:entityId/bank-behavior')
@@ -230,8 +263,11 @@ export class LearningServiceController {
     type: AllBanksBehaviorResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Entity profile not found' })
-  async getAllBankBehaviors(@Param('entityId') entityId: string): Promise<AllBanksBehaviorResponseDto> {
-    return this.learningServiceService.getAllBankBehaviors(entityId);
+  async getAllBankBehaviors(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
+    @Param('entityId') entityId: string,
+  ): Promise<AllBanksBehaviorResponseDto> {
+    return this.learningServiceService.getAllBankBehaviors(tenantContext, entityId);
   }
 
   @Delete('profile/:entityId/bank-behavior/:bankId')
@@ -241,10 +277,11 @@ export class LearningServiceController {
   @ApiResponse({ status: 200, description: 'Bank behavior deleted successfully' })
   @ApiResponse({ status: 404, description: 'Entity profile or bank behavior not found' })
   async deleteBankBehavior(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Param('entityId') entityId: string,
     @Param('bankId') bankId: string,
   ): Promise<{ success: boolean }> {
-    return this.learningServiceService.deleteBankBehavior(entityId, bankId);
+    return this.learningServiceService.deleteBankBehavior(tenantContext, entityId, bankId);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -260,8 +297,9 @@ export class LearningServiceController {
   })
   @ApiResponse({ status: 404, description: 'Reconciliation or entity not found' })
   async buildProfileFromTransactions(
+    @TenantContext() tenantContext: { tenantId: string; userId: string; role: string },
     @Body() dto: BuildProfileFromTransactionsDto,
   ): Promise<PatternLearningResultDto> {
-    return this.learningServiceService.buildProfileFromTransactions(dto);
+    return this.learningServiceService.buildProfileFromTransactions(tenantContext, dto);
   }
 }

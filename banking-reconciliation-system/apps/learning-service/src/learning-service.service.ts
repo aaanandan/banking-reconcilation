@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -8,6 +8,7 @@ import {
   User,
   Transaction,
   Reconciliation,
+  TenantAwareRepository,
 } from '@app/shared';
 import {
   RecordFeedbackDto,
@@ -37,6 +38,8 @@ import {
  */
 @Injectable()
 export class LearningServiceService {
+  private readonly logger = new Logger(LearningServiceService.name);
+
   constructor(
     @InjectRepository(EntityProfile)
     private readonly entityProfileRepo: Repository<EntityProfile>,
@@ -65,12 +68,20 @@ export class LearningServiceService {
    * Record user feedback
    * Captures user overrides, rejections, manual matches, and comments
    *
+   * @param tenantContext - Tenant context
    * @param dto - Feedback data
    * @returns Created feedback record
    */
-  async recordFeedback(dto: RecordFeedbackDto): Promise<FeedbackResponseDto> {
-    // Create feedback entity
-    const feedback = this.userFeedbackRepo.create({
+  async recordFeedback(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    dto: RecordFeedbackDto,
+  ): Promise<FeedbackResponseDto> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Recording feedback for transaction ${dto.transactionId}`);
+
+    const feedbackRepo = new TenantAwareRepository(this.userFeedbackRepo, tenantContext.tenantId);
+
+    // Save to database (tenantId auto-added)
+    const saved = await feedbackRepo.save({
       reconciliationId: dto.reconciliationId,
       transactionId: dto.transactionId,
       feedbackType: dto.feedbackType,
@@ -79,9 +90,6 @@ export class LearningServiceService {
       reason: dto.reason,
       userId: dto.userId,
     });
-
-    // Save to database
-    const saved = await this.userFeedbackRepo.save(feedback);
 
     // Return response
     return {
@@ -100,10 +108,18 @@ export class LearningServiceService {
   /**
    * Get feedback records with optional filtering
    *
+   * @param tenantContext - Tenant context
    * @param query - Filter parameters
    * @returns Array of feedback records
    */
-  async getFeedback(query: GetFeedbackDto): Promise<FeedbackResponseDto[]> {
+  async getFeedback(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    query: GetFeedbackDto,
+  ): Promise<FeedbackResponseDto[]> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Getting feedback records`);
+
+    const feedbackRepo = new TenantAwareRepository(this.userFeedbackRepo, tenantContext.tenantId);
+
     const where: any = {};
 
     if (query.reconciliationId) {
@@ -119,7 +135,7 @@ export class LearningServiceService {
       where.feedbackType = query.feedbackType;
     }
 
-    const feedbacks = await this.userFeedbackRepo.find({
+    const feedbacks = await feedbackRepo.find({
       where,
       order: { createdAt: 'DESC' },
     });
@@ -140,11 +156,19 @@ export class LearningServiceService {
   /**
    * Get feedback by ID
    *
+   * @param tenantContext - Tenant context
    * @param id - Feedback ID
    * @returns Feedback record
    */
-  async getFeedbackById(id: number): Promise<FeedbackResponseDto> {
-    const feedback = await this.userFeedbackRepo.findOne({
+  async getFeedbackById(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    id: number,
+  ): Promise<FeedbackResponseDto> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Getting feedback ${id}`);
+
+    const feedbackRepo = new TenantAwareRepository(this.userFeedbackRepo, tenantContext.tenantId);
+
+    const feedback = await feedbackRepo.findOne({
       where: { id },
     });
 
@@ -169,11 +193,19 @@ export class LearningServiceService {
    * Get feedback statistics for a reconciliation
    * Useful for understanding user behavior and algorithm performance
    *
+   * @param tenantContext - Tenant context
    * @param reconciliationId - Reconciliation ID
    * @returns Feedback statistics
    */
-  async getFeedbackStats(reconciliationId: string): Promise<FeedbackStatsDto> {
-    const feedbacks = await this.userFeedbackRepo.find({
+  async getFeedbackStats(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    reconciliationId: string,
+  ): Promise<FeedbackStatsDto> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Getting feedback stats for reconciliation ${reconciliationId}`);
+
+    const feedbackRepo = new TenantAwareRepository(this.userFeedbackRepo, tenantContext.tenantId);
+
+    const feedbacks = await feedbackRepo.find({
       where: { reconciliationId },
     });
 
@@ -212,14 +244,18 @@ export class LearningServiceService {
   /**
    * Delete feedback record
    *
+   * @param tenantContext - Tenant context
    * @param id - Feedback ID
    */
-  async deleteFeedback(id: number): Promise<{ success: boolean }> {
-    const result = await this.userFeedbackRepo.delete(id);
+  async deleteFeedback(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    id: number,
+  ): Promise<{ success: boolean }> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Deleting feedback ${id}`);
 
-    if (result.affected === 0) {
-      throw new NotFoundException(`Feedback with ID ${id} not found`);
-    }
+    const feedbackRepo = new TenantAwareRepository(this.userFeedbackRepo, tenantContext.tenantId);
+
+    await feedbackRepo.delete(id);
 
     return { success: true };
   }
@@ -231,12 +267,20 @@ export class LearningServiceService {
   /**
    * Create a new entity profile
    *
+   * @param tenantContext - Tenant context
    * @param dto - Entity profile data
    * @returns Created profile
    */
-  async createProfile(dto: CreateEntityProfileDto): Promise<EntityProfileResponseDto> {
+  async createProfile(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    dto: CreateEntityProfileDto,
+  ): Promise<EntityProfileResponseDto> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Creating entity profile for ${dto.entityId}`);
+
+    const profileRepo = new TenantAwareRepository(this.entityProfileRepo, tenantContext.tenantId);
+
     // Check if profile already exists
-    const existing = await this.entityProfileRepo.findOne({
+    const existing = await profileRepo.findOne({
       where: { entityId: dto.entityId },
     });
 
@@ -244,8 +288,8 @@ export class LearningServiceService {
       throw new ConflictException(`Entity profile for '${dto.entityId}' already exists`);
     }
 
-    // Create new profile
-    const profile = this.entityProfileRepo.create({
+    // Create new profile (tenantId auto-added)
+    const saved = await profileRepo.save({
       entityId: dto.entityId,
       primaryName: dto.primaryName,
       aliases: dto.aliases || [],
@@ -262,23 +306,27 @@ export class LearningServiceService {
       confidence: 0,
     });
 
-    const saved = await this.entityProfileRepo.save(profile);
-
     return this.toProfileResponse(saved);
   }
 
   /**
    * Update an existing entity profile
    *
+   * @param tenantContext - Tenant context
    * @param entityId - Entity ID
    * @param dto - Update data
    * @returns Updated profile
    */
   async updateProfile(
+    tenantContext: { tenantId: string; userId: string; role: string },
     entityId: string,
     dto: UpdateEntityProfileDto,
   ): Promise<EntityProfileResponseDto> {
-    const profile = await this.entityProfileRepo.findOne({
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Updating entity profile ${entityId}`);
+
+    const profileRepo = new TenantAwareRepository(this.entityProfileRepo, tenantContext.tenantId);
+
+    const profile = await profileRepo.findOne({
       where: { entityId },
     });
 
@@ -299,7 +347,7 @@ export class LearningServiceService {
     if (dto.frequencyPattern !== undefined) profile.frequencyPattern = dto.frequencyPattern;
     if (dto.preferredDayOfMonth !== undefined) profile.preferredDayOfMonth = dto.preferredDayOfMonth;
 
-    const updated = await this.entityProfileRepo.save(profile);
+    const updated = await profileRepo.save(profile);
 
     return this.toProfileResponse(updated);
   }
@@ -307,11 +355,19 @@ export class LearningServiceService {
   /**
    * Get entity profile by entityId
    *
+   * @param tenantContext - Tenant context
    * @param entityId - Entity ID
    * @returns Entity profile
    */
-  async getProfile(entityId: string): Promise<EntityProfileResponseDto> {
-    const profile = await this.entityProfileRepo.findOne({
+  async getProfile(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    entityId: string,
+  ): Promise<EntityProfileResponseDto> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Getting entity profile ${entityId}`);
+
+    const profileRepo = new TenantAwareRepository(this.entityProfileRepo, tenantContext.tenantId);
+
+    const profile = await profileRepo.findOne({
       where: { entityId },
     });
 
@@ -325,10 +381,17 @@ export class LearningServiceService {
   /**
    * Get all entity profiles
    *
+   * @param tenantContext - Tenant context
    * @returns Array of all profiles
    */
-  async getAllProfiles(): Promise<EntityProfileResponseDto[]> {
-    const profiles = await this.entityProfileRepo.find({
+  async getAllProfiles(
+    tenantContext: { tenantId: string; userId: string; role: string },
+  ): Promise<EntityProfileResponseDto[]> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Getting all entity profiles`);
+
+    const profileRepo = new TenantAwareRepository(this.entityProfileRepo, tenantContext.tenantId);
+
+    const profiles = await profileRepo.find({
       order: { totalTransactions: 'DESC' },
     });
 
@@ -338,14 +401,27 @@ export class LearningServiceService {
   /**
    * Delete entity profile
    *
+   * @param tenantContext - Tenant context
    * @param entityId - Entity ID
    */
-  async deleteProfile(entityId: string): Promise<{ success: boolean }> {
-    const result = await this.entityProfileRepo.delete({ entityId });
+  async deleteProfile(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    entityId: string,
+  ): Promise<{ success: boolean }> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Deleting entity profile ${entityId}`);
 
-    if (result.affected === 0) {
+    const profileRepo = new TenantAwareRepository(this.entityProfileRepo, tenantContext.tenantId);
+
+    // First check if exists
+    const profile = await profileRepo.findOne({
+      where: { entityId },
+    });
+
+    if (!profile) {
       throw new NotFoundException(`Entity profile '${entityId}' not found`);
     }
+
+    await profileRepo.delete(profile.id);
 
     return { success: true };
   }
@@ -353,11 +429,19 @@ export class LearningServiceService {
   /**
    * Get profile statistics
    *
+   * @param tenantContext - Tenant context
    * @param entityId - Entity ID
    * @returns Profile statistics
    */
-  async getProfileStats(entityId: string): Promise<EntityProfileStatsDto> {
-    const profile = await this.entityProfileRepo.findOne({
+  async getProfileStats(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    entityId: string,
+  ): Promise<EntityProfileStatsDto> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Getting profile stats for ${entityId}`);
+
+    const profileRepo = new TenantAwareRepository(this.entityProfileRepo, tenantContext.tenantId);
+
+    const profile = await profileRepo.findOne({
       where: { entityId },
     });
 
@@ -428,10 +512,15 @@ export class LearningServiceService {
    * Update bank-specific behavior for an entity
    */
   async updateBankBehavior(
+    tenantContext: { tenantId: string; userId: string; role: string },
     entityId: string,
     dto: UpdateBankBehaviorDto,
   ): Promise<BankBehaviorResponseDto> {
-    const profile = await this.entityProfileRepo.findOne({
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Updating bank behavior for ${entityId} at bank ${dto.bankId}`);
+
+    const profileRepo = new TenantAwareRepository(this.entityProfileRepo, tenantContext.tenantId);
+
+    const profile = await profileRepo.findOne({
       where: { entityId },
     });
 
@@ -451,7 +540,7 @@ export class LearningServiceService {
       refNumberFormat: dto.behavior.refNumberFormat,
     };
 
-    const updated = await this.entityProfileRepo.save(profile);
+    const updated = await profileRepo.save(profile);
 
     return {
       entityId: updated.entityId,
@@ -465,10 +554,15 @@ export class LearningServiceService {
    * Get bank-specific behavior for an entity at a specific bank
    */
   async getBankBehavior(
+    tenantContext: { tenantId: string; userId: string; role: string },
     entityId: string,
     bankId: string,
   ): Promise<BankBehaviorResponseDto> {
-    const profile = await this.entityProfileRepo.findOne({
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Getting bank behavior for ${entityId} at bank ${bankId}`);
+
+    const profileRepo = new TenantAwareRepository(this.entityProfileRepo, tenantContext.tenantId);
+
+    const profile = await profileRepo.findOne({
       where: { entityId },
     });
 
@@ -493,8 +587,15 @@ export class LearningServiceService {
   /**
    * Get all bank-specific behaviors for an entity
    */
-  async getAllBankBehaviors(entityId: string): Promise<AllBanksBehaviorResponseDto> {
-    const profile = await this.entityProfileRepo.findOne({
+  async getAllBankBehaviors(
+    tenantContext: { tenantId: string; userId: string; role: string },
+    entityId: string,
+  ): Promise<AllBanksBehaviorResponseDto> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Getting all bank behaviors for ${entityId}`);
+
+    const profileRepo = new TenantAwareRepository(this.entityProfileRepo, tenantContext.tenantId);
+
+    const profile = await profileRepo.findOne({
       where: { entityId },
     });
 
@@ -517,10 +618,15 @@ export class LearningServiceService {
    * Delete bank-specific behavior for an entity at a specific bank
    */
   async deleteBankBehavior(
+    tenantContext: { tenantId: string; userId: string; role: string },
     entityId: string,
     bankId: string,
   ): Promise<{ success: boolean }> {
-    const profile = await this.entityProfileRepo.findOne({
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Deleting bank behavior for ${entityId} at bank ${bankId}`);
+
+    const profileRepo = new TenantAwareRepository(this.entityProfileRepo, tenantContext.tenantId);
+
+    const profile = await profileRepo.findOne({
       where: { entityId },
     });
 
@@ -537,7 +643,7 @@ export class LearningServiceService {
     // Remove the bank-specific behavior
     delete profile.bankSpecificBehavior[bankId];
 
-    await this.entityProfileRepo.save(profile);
+    await profileRepo.save(profile);
 
     return { success: true };
   }
@@ -550,10 +656,17 @@ export class LearningServiceService {
    * Build or update entity profile from transaction analysis
    */
   async buildProfileFromTransactions(
+    tenantContext: { tenantId: string; userId: string; role: string },
     dto: BuildProfileFromTransactionsDto,
   ): Promise<PatternLearningResultDto> {
+    this.logger.log(`[Tenant: ${tenantContext.tenantId}] Building profile from transactions for ${dto.entityId}`);
+
+    const reconRepo = new TenantAwareRepository(this.reconciliationRepo, tenantContext.tenantId);
+    const profileRepo = new TenantAwareRepository(this.entityProfileRepo, tenantContext.tenantId);
+    const transactionRepo = new TenantAwareRepository(this.transactionRepo, tenantContext.tenantId);
+
     // Verify reconciliation exists
-    const reconciliation = await this.reconciliationRepo.findOne({
+    const reconciliation = await reconRepo.findOne({
       where: { id: dto.reconciliationId },
     });
 
@@ -562,7 +675,7 @@ export class LearningServiceService {
     }
 
     // Find or create entity profile
-    let profile = await this.entityProfileRepo.findOne({
+    let profile = await profileRepo.findOne({
       where: { entityId: dto.entityId },
     });
 
@@ -576,7 +689,8 @@ export class LearningServiceService {
         );
       }
 
-      profile = this.entityProfileRepo.create({
+      // Create using tenant-aware repo (tenantId auto-added)
+      profile = await profileRepo.save({
         entityId: dto.entityId,
         primaryName: dto.entityName,
         aliases: [],
@@ -593,9 +707,11 @@ export class LearningServiceService {
 
     // Fetch all transactions for this entity in this reconciliation
     // Match by description containing entityId or entityName
+    // Note: Using base repo with manual tenantId filter for query builder
     const transactions = await this.transactionRepo
       .createQueryBuilder('transaction')
-      .where('transaction.reconciliationId = :reconciliationId', {
+      .where('transaction.tenantId = :tenantId', { tenantId: tenantContext.tenantId })
+      .andWhere('transaction.reconciliationId = :reconciliationId', {
         reconciliationId: dto.reconciliationId,
       })
       .andWhere(
@@ -645,7 +761,7 @@ export class LearningServiceService {
     }
 
     // Save updated profile
-    const savedProfile = await this.entityProfileRepo.save(profile);
+    const savedProfile = await profileRepo.save(profile);
 
     return {
       entityId: savedProfile.entityId,
