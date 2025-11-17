@@ -45,6 +45,9 @@ export class User {
   @Column({ default: 'user' })
   role: string;  // 'admin' | 'user'
 
+  @Column({ default: true })
+  isActive: boolean;
+
   @OneToMany(() => Reconciliation, recon => recon.user)
   reconciliations: Reconciliation[];
 
