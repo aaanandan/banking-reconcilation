@@ -111,7 +111,9 @@
       "<rootDir>/test/"
     ],
     "moduleNameMapper": {
-      "^@/(.*)$": "<rootDir>/$1"
+      "^@/(.*)$": "<rootDir>/$1",
+      "^@app/shared/(.*)$": "<rootDir>/libs/shared/src/$1",
+      "^@app/shared$": "<rootDir>/libs/shared/src"
     }
   }
 }
