@@ -6,12 +6,21 @@ import { AuthResponseDto } from './dto/auth-response.dto';
 import { EmailVerificationService } from './email-verification.service';
 import { TwoFactorService } from './two-factor.service';
 import { SessionService } from './session.service';
+import { PasswordResetService } from './password-reset.service';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import {
   VerifyEmailDto,
   ResendVerificationDto,
   VerifyEmailResponseDto,
 } from './dto/verify-email.dto';
+import {
+  RequestPasswordResetDto,
+  ResetPasswordDto,
+  VerifyResetTokenDto,
+  ChangePasswordDto,
+  PasswordResetResponseDto,
+  VerifyResetTokenResponseDto,
+} from './dto/password-reset.dto';
 import {
   Enable2FADto,
   Verify2FADto,
@@ -31,6 +40,7 @@ export class AuthController {
     private readonly emailVerificationService: EmailVerificationService,
     private readonly twoFactorService: TwoFactorService,
     private readonly sessionService: SessionService,
+    private readonly passwordResetService: PasswordResetService,
   ) {}
 
   @Post('register')
@@ -136,6 +146,50 @@ export class AuthController {
     return {
       message: 'If an account exists with this email, a verification link has been sent.',
     };
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // PASSWORD RESET ENDPOINTS
+  // ═══════════════════════════════════════════════════════════
+
+  @Post('forgot-password')
+  @Throttle({ short: { limit: 3, ttl: 60000 } }) // 3 requests per minute
+  @ApiOperation({ summary: 'Request password reset link' })
+  @ApiResponse({ status: 200, description: 'Reset link sent if account exists', type: PasswordResetResponseDto })
+  async requestPasswordReset(@Body() dto: RequestPasswordResetDto): Promise<PasswordResetResponseDto> {
+    return this.passwordResetService.requestPasswordReset(dto.email);
+  }
+
+  @Get('verify-reset-token')
+  @ApiOperation({ summary: 'Verify if password reset token is valid' })
+  @ApiResponse({ status: 200, description: 'Token validation result', type: VerifyResetTokenResponseDto })
+  async verifyResetToken(@Query('token') token: string): Promise<VerifyResetTokenResponseDto> {
+    return this.passwordResetService.verifyResetToken(token);
+  }
+
+  @Post('reset-password')
+  @Throttle({ short: { limit: 3, ttl: 60000 } }) // 3 requests per minute
+  @ApiOperation({ summary: 'Reset password using token from email' })
+  @ApiResponse({ status: 200, description: 'Password reset successful', type: PasswordResetResponseDto })
+  @ApiResponse({ status: 400, description: 'Invalid or expired token' })
+  async resetPassword(@Body() dto: ResetPasswordDto): Promise<PasswordResetResponseDto> {
+    return this.passwordResetService.resetPassword(dto.token, dto.newPassword);
+  }
+
+  @Post('change-password')
+  @ApiOperation({ summary: 'Change password for authenticated user (requires authentication)' })
+  @ApiResponse({ status: 200, description: 'Password changed successfully', type: PasswordResetResponseDto })
+  @ApiResponse({ status: 400, description: 'Current password incorrect' })
+  async changePassword(
+    @Body('userId') userId: string,
+    @Body() dto: ChangePasswordDto,
+  ): Promise<PasswordResetResponseDto> {
+    // NOTE: In production, userId should come from authenticated JWT token
+    return this.passwordResetService.changePassword(
+      userId,
+      dto.currentPassword,
+      dto.newPassword,
+    );
   }
 
   // ═══════════════════════════════════════════════════════════

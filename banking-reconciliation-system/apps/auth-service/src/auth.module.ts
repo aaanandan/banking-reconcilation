@@ -10,6 +10,7 @@ import { EmailVerificationService } from './email-verification.service';
 import { TwoFactorService } from './two-factor.service';
 import { SessionService } from './session.service';
 import { BruteForceProtectionService } from './brute-force-protection.service';
+import { PasswordResetService } from './password-reset.service';
 import { OAuthService } from './oauth.service';
 import { OAuthController } from './oauth.controller';
 import { GoogleStrategy } from './strategies/google.strategy';
@@ -63,6 +64,7 @@ import { SharedModule } from '@app/shared';
     TwoFactorService,
     SessionService,
     BruteForceProtectionService,
+    PasswordResetService,
     OAuthService,
     GoogleStrategy,
     MicrosoftStrategy,
@@ -72,6 +74,7 @@ import { SharedModule } from '@app/shared';
     TwoFactorService,
     SessionService,
     BruteForceProtectionService,
+    PasswordResetService,
     OAuthService,
   ],
 })

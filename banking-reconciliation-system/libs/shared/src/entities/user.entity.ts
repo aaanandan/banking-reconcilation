@@ -99,6 +99,16 @@ export class User {
   accountLockedUntil: Date | null;
   // ═══════════════════════════════════════════════════════════
 
+  // ═══════════════════════════════════════════════════════════
+  // PASSWORD RESET
+  // ═══════════════════════════════════════════════════════════
+  @Column({ nullable: true })
+  resetPasswordToken: string | null;
+
+  @Column({ nullable: true, type: 'timestamp' })
+  resetPasswordExpires: Date | null;
+  // ═══════════════════════════════════════════════════════════
+
   @OneToMany(() => Reconciliation, recon => recon.user)
   reconciliations: Reconciliation[];
 
