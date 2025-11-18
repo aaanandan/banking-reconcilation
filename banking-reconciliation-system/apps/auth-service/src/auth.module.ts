@@ -2,10 +2,15 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { PassportModule } from '@nestjs/passport';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { EmailVerificationService } from './email-verification.service';
 import { TwoFactorService } from './two-factor.service';
+import { OAuthService } from './oauth.service';
+import { OAuthController } from './oauth.controller';
+import { GoogleStrategy } from './strategies/google.strategy';
+import { MicrosoftStrategy } from './strategies/microsoft.strategy';
 import { User } from '@app/shared/entities/user.entity';
 import { Tenant } from '@app/shared/entities/tenant.entity';
 import { SharedModule } from '@app/shared';
@@ -17,6 +22,7 @@ import { SharedModule } from '@app/shared';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    PassportModule.register({ defaultStrategy: 'jwt' }),
     TypeOrmModule.forFeature([User, Tenant]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -29,8 +35,15 @@ import { SharedModule } from '@app/shared';
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController],
-  providers: [AuthService, EmailVerificationService, TwoFactorService],
-  exports: [EmailVerificationService, TwoFactorService],
+  controllers: [AuthController, OAuthController],
+  providers: [
+    AuthService,
+    EmailVerificationService,
+    TwoFactorService,
+    OAuthService,
+    GoogleStrategy,
+    MicrosoftStrategy,
+  ],
+  exports: [EmailVerificationService, TwoFactorService, OAuthService],
 })
 export class AuthModule {}

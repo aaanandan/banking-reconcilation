@@ -33,8 +33,8 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  @Column()
-  passwordHash: string;
+  @Column({ nullable: true })
+  passwordHash: string; // Nullable for OAuth users
 
   @Column()
   firstName: string;
@@ -47,6 +47,21 @@ export class User {
 
   @Column({ default: true })
   isActive: boolean;
+
+  // ═══════════════════════════════════════════════════════════
+  // OAUTH / SOCIAL LOGIN
+  // ═══════════════════════════════════════════════════════════
+  @Column({ nullable: true })
+  @Index()
+  googleId: string; // Google OAuth ID
+
+  @Column({ nullable: true })
+  @Index()
+  microsoftId: string; // Microsoft OAuth ID
+
+  @Column({ default: 'local' })
+  authProvider: string; // 'local' | 'google' | 'microsoft'
+  // ═══════════════════════════════════════════════════════════
 
   // ═══════════════════════════════════════════════════════════
   // EMAIL VERIFICATION
