@@ -28,6 +28,8 @@ import { OnboardingService } from './onboarding.service';
 import { OnboardingController } from './onboarding.controller';
 import { FeatureFlagService } from './feature-flag.service';
 import { FeatureFlagController } from './feature-flag.controller';
+import { AdminDashboardService } from './admin-dashboard.service';
+import { AdminController } from './admin.controller';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { MicrosoftStrategy } from './strategies/microsoft.strategy';
 import { AuditLoggingInterceptor } from './interceptors/audit-logging.interceptor';
@@ -77,7 +79,7 @@ import { SharedModule } from '@app/shared';
       },
     ]),
   ],
-  controllers: [AuthController, OAuthController, ApiKeyController, AuditLogController, TenantController, BillingController, AnalyticsController, OnboardingController, FeatureFlagController],
+  controllers: [AuthController, OAuthController, ApiKeyController, AuditLogController, TenantController, BillingController, AnalyticsController, OnboardingController, FeatureFlagController, AdminController],
   providers: [
     AuthService,
     EmailVerificationService,
@@ -93,6 +95,7 @@ import { SharedModule } from '@app/shared';
     AnalyticsService,
     OnboardingService,
     FeatureFlagService,
+    AdminDashboardService,
     GoogleStrategy,
     MicrosoftStrategy,
     {
@@ -114,6 +117,7 @@ import { SharedModule } from '@app/shared';
     AnalyticsService,
     OnboardingService,
     FeatureFlagService,
+    AdminDashboardService,
   ],
 })
 export class AuthModule {}
