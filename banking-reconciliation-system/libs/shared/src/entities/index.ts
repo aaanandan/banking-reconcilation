@@ -5,6 +5,7 @@ export * from './refresh-token.entity';
 export * from './api-key.entity';
 export * from './audit-log.entity';
 export * from './onboarding-checklist.entity';
+export * from './feature-flag.entity';
 export * from './reconciliation.entity';
 export * from './bank-file.entity';
 export * from './ledger-file.entity';
