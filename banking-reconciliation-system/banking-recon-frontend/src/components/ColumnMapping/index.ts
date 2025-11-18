@@ -7,3 +7,6 @@ export { PerformanceMonitor } from './PerformanceMonitor';
 export { EdgeCaseHandler } from './EdgeCaseHandler';
 export { MappingActionsToolbar } from './MappingActionsToolbar';
 export { MappingStatistics } from './MappingStatistics';
+export { MappingStepsProgress } from './MappingStepsProgress';
+export { MappingValidationPanel } from './MappingValidationPanel';
+export { ColumnMappingManager } from './ColumnMappingManager';
