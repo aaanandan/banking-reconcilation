@@ -13,11 +13,14 @@ import { BruteForceProtectionService } from './brute-force-protection.service';
 import { PasswordResetService } from './password-reset.service';
 import { OAuthService } from './oauth.service';
 import { OAuthController } from './oauth.controller';
+import { ApiKeyService } from './api-key.service';
+import { ApiKeyController } from './api-key.controller';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { MicrosoftStrategy } from './strategies/microsoft.strategy';
 import { User } from '@app/shared/entities/user.entity';
 import { Tenant } from '@app/shared/entities/tenant.entity';
 import { RefreshToken } from '@app/shared/entities/refresh-token.entity';
+import { ApiKey } from '@app/shared/entities/api-key.entity';
 import { SharedModule } from '@app/shared';
 
 @Module({
@@ -28,7 +31,7 @@ import { SharedModule } from '@app/shared';
       envFilePath: '.env',
     }),
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    TypeOrmModule.forFeature([User, Tenant, RefreshToken]),
+    TypeOrmModule.forFeature([User, Tenant, RefreshToken, ApiKey]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -57,7 +60,7 @@ import { SharedModule } from '@app/shared';
       },
     ]),
   ],
-  controllers: [AuthController, OAuthController],
+  controllers: [AuthController, OAuthController, ApiKeyController],
   providers: [
     AuthService,
     EmailVerificationService,
@@ -66,6 +69,7 @@ import { SharedModule } from '@app/shared';
     BruteForceProtectionService,
     PasswordResetService,
     OAuthService,
+    ApiKeyService,
     GoogleStrategy,
     MicrosoftStrategy,
   ],
@@ -76,6 +80,7 @@ import { SharedModule } from '@app/shared';
     BruteForceProtectionService,
     PasswordResetService,
     OAuthService,
+    ApiKeyService,
   ],
 })
 export class AuthModule {}
