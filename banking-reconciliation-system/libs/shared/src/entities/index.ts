@@ -9,6 +9,8 @@ export * from './feature-flag.entity';
 export * from './notification.entity';
 export * from './webhook.entity';
 export * from './webhook-delivery.entity';
+export * from './user-activity.entity';
+export * from './user-session.entity';
 export * from './reconciliation.entity';
 export * from './bank-file.entity';
 export * from './ledger-file.entity';
