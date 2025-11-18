@@ -33,6 +33,8 @@ import { AdminController } from './admin.controller';
 import { EmailService } from './email.service';
 import { EmailQueueProcessor } from './email-queue.processor';
 import { EmailController } from './email.controller';
+import { WebhookService } from './webhook.service';
+import { WebhookController } from './webhook.controller';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { MicrosoftStrategy } from './strategies/microsoft.strategy';
 import { AuditLoggingInterceptor } from './interceptors/audit-logging.interceptor';
@@ -44,6 +46,8 @@ import { AuditLog } from '@app/shared/entities/audit-log.entity';
 import { OnboardingChecklist } from '@app/shared/entities/onboarding-checklist.entity';
 import { FeatureFlag } from '@app/shared/entities/feature-flag.entity';
 import { Notification } from '@app/shared/entities/notification.entity';
+import { Webhook } from '@app/shared/entities/webhook.entity';
+import { WebhookDelivery } from '@app/shared/entities/webhook-delivery.entity';
 import { SharedModule } from '@app/shared';
 
 @Module({
@@ -54,7 +58,7 @@ import { SharedModule } from '@app/shared';
       envFilePath: '.env',
     }),
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    TypeOrmModule.forFeature([User, Tenant, RefreshToken, ApiKey, AuditLog, OnboardingChecklist, FeatureFlag, Notification]),
+    TypeOrmModule.forFeature([User, Tenant, RefreshToken, ApiKey, AuditLog, OnboardingChecklist, FeatureFlag, Notification, Webhook, WebhookDelivery]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -83,7 +87,7 @@ import { SharedModule } from '@app/shared';
       },
     ]),
   ],
-  controllers: [AuthController, OAuthController, ApiKeyController, AuditLogController, TenantController, BillingController, AnalyticsController, OnboardingController, FeatureFlagController, AdminController, EmailController],
+  controllers: [AuthController, OAuthController, ApiKeyController, AuditLogController, TenantController, BillingController, AnalyticsController, OnboardingController, FeatureFlagController, AdminController, EmailController, WebhookController],
   providers: [
     AuthService,
     EmailVerificationService,
@@ -102,6 +106,7 @@ import { SharedModule } from '@app/shared';
     AdminDashboardService,
     EmailService,
     EmailQueueProcessor,
+    WebhookService,
     GoogleStrategy,
     MicrosoftStrategy,
     {
@@ -126,6 +131,7 @@ import { SharedModule } from '@app/shared';
     AdminDashboardService,
     EmailService,
     EmailQueueProcessor,
+    WebhookService,
   ],
 })
 export class AuthModule {}
