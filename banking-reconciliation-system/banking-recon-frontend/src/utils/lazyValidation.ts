@@ -1,13 +1,13 @@
-import { DetectedColumn, ColumnMapping } from '../services/dataPrepService';
+import type { DetectedColumn, ColumnMapping } from '../services/dataPrepService';
 import {
   validateAllMappings,
   calculateMappingQuality,
-  ValidationResult,
 } from './mappingValidation';
+import type { ValidationResult } from './mappingValidation';
 import {
   runAdvancedValidation,
-  AdvancedValidationSummary,
 } from './advancedValidation';
+import type { AdvancedValidationSummary } from './advancedValidation';
 
 /**
  * Lazy Validation Utilities

@@ -1,4 +1,4 @@
-import { DetectedColumn, ColumnMapping } from '../services/dataPrepService';
+import type { DetectedColumn, ColumnMapping } from '../services/dataPrepService';
 
 /**
  * Mapping Guidance Utility

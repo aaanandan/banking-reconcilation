@@ -100,16 +100,16 @@ export const getHelmetConfig = () => {
     crossOriginEmbedderPolicy: true,
 
     // Cross-Origin-Opener-Policy
-    crossOriginOpenerPolicy: { policy: 'same-origin' },
+    crossOriginOpenerPolicy: { policy: 'same-origin' as const },
 
     // Cross-Origin-Resource-Policy
-    crossOriginResourcePolicy: { policy: 'same-origin' },
+    crossOriginResourcePolicy: { policy: 'same-origin' as const },
 
     // DNS Prefetch Control
     dnsPrefetchControl: { allow: false },
 
     // Frameguard (X-Frame-Options)
-    frameguard: { action: 'deny' },
+    frameguard: { action: 'deny' as const },
 
     // Hide Powered-By header
     hidePoweredBy: true,
@@ -131,10 +131,10 @@ export const getHelmetConfig = () => {
     originAgentCluster: true,
 
     // Permitted Cross-Domain Policies
-    permittedCrossDomainPolicies: { permittedPolicies: 'none' },
+    permittedCrossDomainPolicies: { permittedPolicies: 'none' as const },
 
     // Referrer Policy
-    referrerPolicy: { policy: 'no-referrer' },
+    referrerPolicy: { policy: 'no-referrer' as const },
 
     // X-XSS-Protection
     xssFilter: true,

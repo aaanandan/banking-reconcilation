@@ -16,7 +16,6 @@ async function bootstrap() {
   const environment = process.env.NODE_ENV || 'development';
 
   // Trust proxy (important for load balancers to get correct IP addresses)
-  app.enable('trust proxy');
   app.getHttpAdapter().getInstance().set('trust proxy', getTrustedProxyConfig());
 
   // Security headers with Helmet.js
