@@ -86,6 +86,19 @@ export class User {
   twoFactorSecret: string; // Encrypted TOTP secret
   // ═══════════════════════════════════════════════════════════
 
+  // ═══════════════════════════════════════════════════════════
+  // BRUTE FORCE PROTECTION
+  // ═══════════════════════════════════════════════════════════
+  @Column({ default: 0 })
+  failedLoginAttempts: number;
+
+  @Column({ nullable: true, type: 'timestamp' })
+  lastFailedLoginAt: Date | null;
+
+  @Column({ nullable: true, type: 'timestamp' })
+  accountLockedUntil: Date | null;
+  // ═══════════════════════════════════════════════════════════
+
   @OneToMany(() => Reconciliation, recon => recon.user)
   reconciliations: Reconciliation[];
 

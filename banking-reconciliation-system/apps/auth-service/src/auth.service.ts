@@ -13,6 +13,7 @@ import { AuthResponseDto } from './dto/auth-response.dto';
 import { EmailVerificationService } from './email-verification.service';
 import { TwoFactorService } from './two-factor.service';
 import { SessionService } from './session.service';
+import { BruteForceProtectionService } from './brute-force-protection.service';
 
 @Injectable()
 export class AuthService {
@@ -27,6 +28,7 @@ export class AuthService {
     private emailVerificationService: EmailVerificationService,
     private twoFactorService: TwoFactorService,
     private sessionService: SessionService,
+    private bruteForceProtection: BruteForceProtectionService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResponseDto> {
@@ -103,11 +105,28 @@ export class AuthService {
     });
 
     if (!user) {
+      // Don't reveal whether user exists
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    // Check if account is locked due to failed attempts
+    await this.bruteForceProtection.checkAccountLock(user);
+
     const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!isPasswordValid) {
+      // Record failed login attempt
+      const isLocked = await this.bruteForceProtection.recordFailedAttempt(user.id);
+
+      if (isLocked) {
+        throw new UnauthorizedException(
+          'Account is temporarily locked due to multiple failed login attempts. ' +
+          'Please try again in 15 minutes.',
+        );
+      }
+
+      const remainingAttempts = this.bruteForceProtection.getRemainingAttempts(user);
+      this.logger.warn(`Failed login attempt for user: ${user.email}, ${remainingAttempts} attempts remaining`);
+
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -125,11 +144,16 @@ export class AuthService {
       // Verify 2FA token
       const isTokenValid = await this.twoFactorService.verifyToken(user.id, dto.twoFactorToken);
       if (!isTokenValid) {
+        // Record failed attempt for invalid 2FA token
+        await this.bruteForceProtection.recordFailedAttempt(user.id);
         throw new UnauthorizedException('Invalid 2FA token');
       }
 
       this.logger.log(`User ${user.id} logged in with 2FA`);
     }
+
+    // Successful login - reset failed attempts
+    await this.bruteForceProtection.resetLoginAttempts(user.id);
 
     // Generate token pair (access + refresh)
     const tokenPair = await this.sessionService.generateTokenPair(user);

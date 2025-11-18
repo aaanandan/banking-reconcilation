@@ -3,11 +3,13 @@ import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { EmailVerificationService } from './email-verification.service';
 import { TwoFactorService } from './two-factor.service';
 import { SessionService } from './session.service';
+import { BruteForceProtectionService } from './brute-force-protection.service';
 import { OAuthService } from './oauth.service';
 import { OAuthController } from './oauth.controller';
 import { GoogleStrategy } from './strategies/google.strategy';
@@ -36,6 +38,23 @@ import { SharedModule } from '@app/shared';
       }),
       inject: [ConfigService],
     }),
+    ThrottlerModule.forRoot([
+      {
+        name: 'short',
+        ttl: 1000, // 1 second
+        limit: 3, // 3 requests per second
+      },
+      {
+        name: 'medium',
+        ttl: 10000, // 10 seconds
+        limit: 20, // 20 requests per 10 seconds
+      },
+      {
+        name: 'long',
+        ttl: 60000, // 1 minute
+        limit: 100, // 100 requests per minute
+      },
+    ]),
   ],
   controllers: [AuthController, OAuthController],
   providers: [
@@ -43,10 +62,17 @@ import { SharedModule } from '@app/shared';
     EmailVerificationService,
     TwoFactorService,
     SessionService,
+    BruteForceProtectionService,
     OAuthService,
     GoogleStrategy,
     MicrosoftStrategy,
   ],
-  exports: [EmailVerificationService, TwoFactorService, SessionService, OAuthService],
+  exports: [
+    EmailVerificationService,
+    TwoFactorService,
+    SessionService,
+    BruteForceProtectionService,
+    OAuthService,
+  ],
 })
 export class AuthModule {}
