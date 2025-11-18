@@ -456,3 +456,246 @@ export const handleSSOCallback = (searchParams: URLSearchParams): {
 
   return { success: true };
 };
+
+// ==================== REGISTRATION ====================
+
+export interface CompanyInfo {
+  companyName: string;
+  companySize: CompanySize;
+  industry?: string;
+  country: string;
+}
+
+export enum CompanySize {
+  SOLO = 'solo',
+  SMALL = 'small',
+  MEDIUM = 'medium',
+  LARGE = 'large',
+  ENTERPRISE = 'enterprise',
+}
+
+export const COMPANY_SIZE_OPTIONS = [
+  { value: CompanySize.SOLO, label: '1 person (just me)', description: 'Solo practitioner or freelancer' },
+  { value: CompanySize.SMALL, label: '2-10 people', description: 'Small business or startup' },
+  { value: CompanySize.MEDIUM, label: '11-50 people', description: 'Growing business' },
+  { value: CompanySize.LARGE, label: '51-200 people', description: 'Established company' },
+  { value: CompanySize.ENTERPRISE, label: '200+ people', description: 'Enterprise organization' },
+];
+
+export const INDUSTRY_OPTIONS = [
+  'Accounting & Bookkeeping',
+  'Banking & Finance',
+  'Construction',
+  'Consulting',
+  'E-commerce',
+  'Education',
+  'Healthcare',
+  'Hospitality',
+  'Manufacturing',
+  'Non-Profit',
+  'Real Estate',
+  'Retail',
+  'Technology',
+  'Transportation',
+  'Other',
+];
+
+export interface UserDetails {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  acceptedTerms: boolean;
+}
+
+export interface RegistrationData {
+  companyInfo: CompanyInfo;
+  userDetails: UserDetails;
+}
+
+export interface VerificationCodeData {
+  code: string;
+  email: string;
+}
+
+/**
+ * Validate company name
+ */
+export const validateCompanyName = (name: string): { valid: boolean; error?: string } => {
+  if (!name || name.trim().length === 0) {
+    return { valid: false, error: 'Company name is required' };
+  }
+
+  if (name.trim().length < 2) {
+    return { valid: false, error: 'Company name must be at least 2 characters' };
+  }
+
+  if (name.length > 100) {
+    return { valid: false, error: 'Company name must not exceed 100 characters' };
+  }
+
+  return { valid: true };
+};
+
+/**
+ * Validate company info step
+ */
+export const validateCompanyInfo = (info: CompanyInfo): ValidationResult => {
+  const errors: Record<string, string> = {};
+
+  // Validate company name
+  const nameValidation = validateCompanyName(info.companyName);
+  if (!nameValidation.valid) {
+    errors.companyName = nameValidation.error!;
+  }
+
+  // Validate company size
+  if (!info.companySize) {
+    errors.companySize = 'Please select your company size';
+  }
+
+  // Validate country
+  if (!info.country) {
+    errors.country = 'Please select your country';
+  }
+
+  return {
+    valid: Object.keys(errors).length === 0,
+    errors,
+  };
+};
+
+/**
+ * Validate first name
+ */
+export const validateFirstName = (name: string): { valid: boolean; error?: string } => {
+  if (!name || name.trim().length === 0) {
+    return { valid: false, error: 'First name is required' };
+  }
+
+  if (name.trim().length < 2) {
+    return { valid: false, error: 'First name must be at least 2 characters' };
+  }
+
+  if (name.length > 50) {
+    return { valid: false, error: 'First name must not exceed 50 characters' };
+  }
+
+  return { valid: true };
+};
+
+/**
+ * Validate last name
+ */
+export const validateLastName = (name: string): { valid: boolean; error?: string } => {
+  if (!name || name.trim().length === 0) {
+    return { valid: false, error: 'Last name is required' };
+  }
+
+  if (name.trim().length < 2) {
+    return { valid: false, error: 'Last name must be at least 2 characters' };
+  }
+
+  if (name.length > 50) {
+    return { valid: false, error: 'Last name must not exceed 50 characters' };
+  }
+
+  return { valid: true };
+};
+
+/**
+ * Validate password confirmation
+ */
+export const validatePasswordConfirmation = (
+  password: string,
+  confirmPassword: string
+): { valid: boolean; error?: string } => {
+  if (!confirmPassword) {
+    return { valid: false, error: 'Please confirm your password' };
+  }
+
+  if (password !== confirmPassword) {
+    return { valid: false, error: 'Passwords do not match' };
+  }
+
+  return { valid: true };
+};
+
+/**
+ * Validate user details step
+ */
+export const validateUserDetails = (details: UserDetails): ValidationResult => {
+  const errors: Record<string, string> = {};
+
+  // Validate first name
+  const firstNameValidation = validateFirstName(details.firstName);
+  if (!firstNameValidation.valid) {
+    errors.firstName = firstNameValidation.error!;
+  }
+
+  // Validate last name
+  const lastNameValidation = validateLastName(details.lastName);
+  if (!lastNameValidation.valid) {
+    errors.lastName = lastNameValidation.error!;
+  }
+
+  // Validate email
+  const emailValidation = validateEmail(details.email);
+  if (!emailValidation.valid) {
+    errors.email = emailValidation.error!;
+  }
+
+  // Validate password
+  const passwordValidation = validatePassword(details.password);
+  if (!passwordValidation.valid) {
+    errors.password = passwordValidation.error!;
+  }
+
+  // Validate password confirmation
+  const confirmValidation = validatePasswordConfirmation(details.password, details.confirmPassword);
+  if (!confirmValidation.valid) {
+    errors.confirmPassword = confirmValidation.error!;
+  }
+
+  // Validate terms acceptance
+  if (!details.acceptedTerms) {
+    errors.acceptedTerms = 'You must accept the Terms of Service to continue';
+  }
+
+  return {
+    valid: Object.keys(errors).length === 0,
+    errors,
+  };
+};
+
+/**
+ * Validate verification code
+ */
+export const validateVerificationCode = (code: string): { valid: boolean; error?: string } => {
+  if (!code || code.trim().length === 0) {
+    return { valid: false, error: 'Verification code is required' };
+  }
+
+  // Remove spaces and dashes
+  const cleanCode = code.replace(/[\s-]/g, '');
+
+  if (cleanCode.length !== 6) {
+    return { valid: false, error: 'Verification code must be 6 digits' };
+  }
+
+  if (!/^\d+$/.test(cleanCode)) {
+    return { valid: false, error: 'Verification code must contain only numbers' };
+  }
+
+  return { valid: true };
+};
+
+/**
+ * Format verification code for display (123456 → 123-456)
+ */
+export const formatVerificationCode = (code: string): string => {
+  const cleanCode = code.replace(/[\s-]/g, '');
+  if (cleanCode.length <= 3) return cleanCode;
+  return `${cleanCode.slice(0, 3)}-${cleanCode.slice(3, 6)}`;
+};
