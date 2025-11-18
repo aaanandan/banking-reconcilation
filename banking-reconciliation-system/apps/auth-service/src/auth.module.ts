@@ -20,6 +20,8 @@ import { AuditLogService } from './audit-log.service';
 import { AuditLogController } from './audit-log.controller';
 import { TenantService } from './tenant.service';
 import { TenantController } from './tenant.controller';
+import { StripeService } from './stripe.service';
+import { BillingController } from './billing.controller';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { MicrosoftStrategy } from './strategies/microsoft.strategy';
 import { AuditLoggingInterceptor } from './interceptors/audit-logging.interceptor';
@@ -67,7 +69,7 @@ import { SharedModule } from '@app/shared';
       },
     ]),
   ],
-  controllers: [AuthController, OAuthController, ApiKeyController, AuditLogController, TenantController],
+  controllers: [AuthController, OAuthController, ApiKeyController, AuditLogController, TenantController, BillingController],
   providers: [
     AuthService,
     EmailVerificationService,
@@ -79,6 +81,7 @@ import { SharedModule } from '@app/shared';
     ApiKeyService,
     AuditLogService,
     TenantService,
+    StripeService,
     GoogleStrategy,
     MicrosoftStrategy,
     {
@@ -96,6 +99,7 @@ import { SharedModule } from '@app/shared';
     ApiKeyService,
     AuditLogService,
     TenantService,
+    StripeService,
   ],
 })
 export class AuthModule {}
