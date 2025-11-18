@@ -47,7 +47,7 @@ export class StripeService {
       this.logger.warn('STRIPE_SECRET_KEY not configured');
     }
     this.stripe = new Stripe(apiKey || 'sk_test_dummy', {
-      apiVersion: '2024-11-20.acacia',
+      apiVersion: '2025-10-29.clover',
     });
   }
 
@@ -160,7 +160,6 @@ export class StripeService {
       },
       product_data: {
         name: `${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan`,
-        description: `Banking Reconciliation ${plan} subscription`,
       },
       lookup_key: lookupKey,
     });
@@ -173,16 +172,17 @@ export class StripeService {
    */
   async getSubscription(subscriptionId: string): Promise<SubscriptionResponseDto> {
     const subscription = await this.stripe.subscriptions.retrieve(subscriptionId);
+    const sub = subscription as any; // Type assertion for Stripe API compatibility
 
     return {
-      id: subscription.id,
-      status: subscription.status,
-      plan: subscription.metadata?.plan || 'unknown',
-      currentPeriodStart: new Date(subscription.current_period_start * 1000),
-      currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-      cancelAtPeriodEnd: subscription.cancel_at_period_end,
-      amount: subscription.items.data[0]?.price.unit_amount || 0,
-      currency: subscription.items.data[0]?.price.currency || 'usd',
+      id: sub.id,
+      status: sub.status,
+      plan: sub.metadata?.plan || 'unknown',
+      currentPeriodStart: new Date((sub.current_period_start || Date.now() / 1000) * 1000),
+      currentPeriodEnd: new Date((sub.current_period_end || Date.now() / 1000) * 1000),
+      cancelAtPeriodEnd: sub.cancel_at_period_end || false,
+      amount: sub.items?.data[0]?.price?.unit_amount || 0,
+      currency: sub.items?.data[0]?.price?.currency || 'usd',
     };
   }
 

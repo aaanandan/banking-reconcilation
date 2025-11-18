@@ -452,9 +452,15 @@ export class WebhookService {
 
     await this.deliverWebhook(delivery);
 
-    return this.webhookDeliveryRepository.findOne({
+    const result = await this.webhookDeliveryRepository.findOne({
       where: { id: delivery.id },
     });
+
+    if (!result) {
+      throw new Error('Failed to retrieve webhook delivery after test');
+    }
+
+    return result;
   }
 
   /**

@@ -53,6 +53,9 @@ export class TwoFactorService {
     });
 
     // Generate QR code for authenticator apps
+    if (!secret.otpauth_url) {
+      throw new Error('Failed to generate OTP auth URL');
+    }
     const qrCode = await QRCode.toDataURL(secret.otpauth_url);
 
     // Generate backup codes (8 codes, 8 characters each)
@@ -175,7 +178,7 @@ export class TwoFactorService {
     // Disable 2FA and remove secret
     await this.userRepository.update(userId, {
       twoFactorEnabled: false,
-      twoFactorSecret: null,
+      twoFactorSecret: undefined,
     });
 
     this.logger.log(`2FA disabled successfully for user ${userId}`);

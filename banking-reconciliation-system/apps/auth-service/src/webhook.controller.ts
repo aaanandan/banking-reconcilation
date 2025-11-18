@@ -51,14 +51,14 @@ export class WebhookController {
     webhooks: Array<{
       id: string;
       url: string;
-      description: string;
+      description?: string;
       events: WebhookEventEnum[];
       enabled: boolean;
       totalDeliveries: number;
       successfulDeliveries: number;
       failedDeliveries: number;
       successRate: number;
-      lastDeliveryAt: Date;
+      lastDeliveryAt?: Date;
       createdAt: Date;
     }>;
   }> {
@@ -97,7 +97,7 @@ export class WebhookController {
   ): Promise<{
     id: string;
     url: string;
-    description: string;
+    description?: string;
     events: WebhookEventEnum[];
     enabled: boolean;
     headers: Record<string, string>;
@@ -107,9 +107,9 @@ export class WebhookController {
     successfulDeliveries: number;
     failedDeliveries: number;
     successRate: number;
-    lastDeliveryAt: Date;
-    lastSuccessAt: Date;
-    lastFailureAt: Date;
+    lastDeliveryAt?: Date;
+    lastSuccessAt?: Date;
+    lastFailureAt?: Date;
     createdAt: Date;
     updatedAt: Date;
   }> {
@@ -165,7 +165,7 @@ export class WebhookController {
   ): Promise<{
     id: string;
     url: string;
-    description: string;
+    description?: string;
     events: WebhookEventEnum[];
     secret: string;
     enabled: boolean;
@@ -351,12 +351,12 @@ export class WebhookController {
       status: string;
       attempts: number;
       maxAttempts: number;
-      responseStatus: number;
-      durationMs: number;
-      errorMessage: string;
+      responseStatus?: number;
+      durationMs?: number;
+      errorMessage?: string;
       createdAt: Date;
-      sentAt: Date;
-      completedAt: Date;
+      sentAt?: Date;
+      completedAt?: Date;
     }>;
   }> {
     const tenantId = req.user.tenantId;
@@ -406,17 +406,17 @@ export class WebhookController {
     attempts: number;
     maxAttempts: number;
     requestUrl: string;
-    requestHeaders: Record<string, string>;
-    requestBody: Record<string, any>;
-    responseStatus: number;
-    responseBody: string;
-    durationMs: number;
-    errorMessage: string;
-    errorCode: string;
+    requestHeaders?: Record<string, string>;
+    requestBody?: Record<string, any>;
+    responseStatus?: number;
+    responseBody?: string;
+    durationMs?: number;
+    errorMessage?: string;
+    errorCode?: string;
     createdAt: Date;
-    sentAt: Date;
-    completedAt: Date;
-    nextRetryAt: Date;
+    sentAt?: Date;
+    completedAt?: Date;
+    nextRetryAt?: Date;
   }> {
     const tenantId = req.user.tenantId;
 

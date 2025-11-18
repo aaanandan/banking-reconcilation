@@ -82,7 +82,7 @@ export class ApiKeyService {
       prefix,
       scopes: dto.scopes,
       expiresAt,
-      ipWhitelist: dto.ipWhitelist || null,
+      ipWhitelist: dto.ipWhitelist || undefined,
       isActive: true,
       usageCount: 0,
     });

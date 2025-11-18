@@ -3,7 +3,7 @@
 import { Controller, Get, UseGuards, Req, Res, Logger } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { OAuthService, OAuthProfile } from './oauth.service';
 import { AuthResponseDto } from './dto/auth-response.dto';
 
@@ -36,7 +36,7 @@ export class OAuthController {
     this.logger.log('Google OAuth callback received');
 
     try {
-      const profile = req.user as OAuthProfile;
+      const profile = (req.user as unknown) as OAuthProfile;
       const authResponse = await this.oauthService.handleOAuthCallback(profile);
 
       // In production, redirect to frontend with token
@@ -77,7 +77,7 @@ export class OAuthController {
     this.logger.log('Microsoft OAuth callback received');
 
     try {
-      const profile = req.user as OAuthProfile;
+      const profile = (req.user as unknown) as OAuthProfile;
       const authResponse = await this.oauthService.handleOAuthCallback(profile);
 
       // In production, redirect to frontend with token
@@ -104,7 +104,7 @@ export class OAuthController {
   @ApiOperation({ summary: 'Google OAuth callback (JSON response for testing)' })
   @UseGuards(AuthGuard('google'))
   async googleAuthCallbackJson(@Req() req: Request): Promise<AuthResponseDto> {
-    const profile = req.user as OAuthProfile;
+    const profile = (req.user as unknown) as OAuthProfile;
     return this.oauthService.handleOAuthCallback(profile);
   }
 
@@ -112,7 +112,7 @@ export class OAuthController {
   @ApiOperation({ summary: 'Microsoft OAuth callback (JSON response for testing)' })
   @UseGuards(AuthGuard('microsoft'))
   async microsoftAuthCallbackJson(@Req() req: Request): Promise<AuthResponseDto> {
-    const profile = req.user as OAuthProfile;
+    const profile = (req.user as unknown) as OAuthProfile;
     return this.oauthService.handleOAuthCallback(profile);
   }
 }

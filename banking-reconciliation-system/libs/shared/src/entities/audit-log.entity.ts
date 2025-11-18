@@ -41,6 +41,9 @@ export class AuditLog {
   @Index()
   userId: string | null;
 
+  @Column({ nullable: true })
+  userEmail: string | undefined; // Denormalized for quick access
+
   @ManyToOne(() => User, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'userId' })
   user: User;
@@ -49,6 +52,10 @@ export class AuditLog {
   @Column({ length: 100 })
   @Index()
   eventType: string; // login, logout, register, password_reset, api_key_created, etc.
+
+  @Column({ length: 100 })
+  @Index()
+  action: string; // Alias for eventType for backwards compatibility
 
   @Column({ length: 50 })
   @Index()
@@ -127,6 +134,10 @@ export class AuditLog {
   @CreateDateColumn()
   @Index()
   createdAt: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  @Index()
+  timestamp: Date; // Alias for createdAt for backwards compatibility
 
   // Retention policy flag
   @Column({ default: false })

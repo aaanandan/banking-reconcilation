@@ -121,8 +121,8 @@ export class EmailVerificationService {
     // Mark email as verified and clear token
     await this.userRepository.update(user.id, {
       emailVerified: true,
-      emailVerificationToken: null,
-      emailVerificationExpires: null,
+      emailVerificationToken: undefined,
+      emailVerificationExpires: undefined,
     });
 
     this.logger.log(`Email successfully verified for user ${user.id}`);

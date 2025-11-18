@@ -38,7 +38,7 @@ export class AnalyticsService {
    */
   async getDashboardMetrics(tenantId: string, dto: GetAnalyticsDto): Promise<DashboardMetricsDto> {
     const tenant = await this.tenantService.findByTenantId(tenantId);
-    const { startDate, endDate } = this.getDateRange(dto.timeRange, dto.startDate, dto.endDate);
+    const { startDate, endDate } = this.getDateRange(dto.timeRange || TimeRangeEnum.LAST_30_DAYS, dto.startDate, dto.endDate);
     const previousPeriod = this.getPreviousPeriod(startDate, endDate);
 
     // Get current period metrics from audit logs
@@ -97,7 +97,7 @@ export class AnalyticsService {
     tenantId: string,
     dto: GetAnalyticsDto,
   ): Promise<TimeSeriesMetricDto[]> {
-    const { startDate, endDate } = this.getDateRange(dto.timeRange, dto.startDate, dto.endDate);
+    const { startDate, endDate } = this.getDateRange(dto.timeRange || TimeRangeEnum.LAST_30_DAYS, dto.startDate, dto.endDate);
     const metricTypes = dto.metricType ? [dto.metricType] : Object.values(MetricTypeEnum);
 
     const metrics: TimeSeriesMetricDto[] = [];
@@ -137,7 +137,7 @@ export class AnalyticsService {
    */
   async generateUsageReport(tenantId: string, dto: GetAnalyticsDto): Promise<UsageReportDto> {
     const tenant = await this.tenantService.findByTenantId(tenantId);
-    const { startDate, endDate } = this.getDateRange(dto.timeRange, dto.startDate, dto.endDate);
+    const { startDate, endDate } = this.getDateRange(dto.timeRange || TimeRangeEnum.LAST_30_DAYS, dto.startDate, dto.endDate);
 
     const metrics = await this.getMetricsForPeriod(tenantId, startDate, endDate);
     const topUsers = await this.getTopUsers(tenantId, startDate, endDate, 5);

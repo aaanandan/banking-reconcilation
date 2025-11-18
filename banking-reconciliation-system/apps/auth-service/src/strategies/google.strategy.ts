@@ -19,7 +19,8 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
         'http://localhost:3000/auth/oauth/google/callback',
       ),
       scope: ['email', 'profile'],
-    });
+      passReqToCallback: false,
+    } as any); // Type assertion for passport strategy options
 
     this.logger.log('Google OAuth Strategy initialized');
   }
@@ -36,7 +37,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
 
     if (!emails || emails.length === 0) {
       this.logger.error('No email provided by Google OAuth');
-      return done(new Error('No email provided by Google'), null);
+      return done(new Error('No email provided by Google'), false);
     }
 
     const oauthProfile: OAuthProfile = {
