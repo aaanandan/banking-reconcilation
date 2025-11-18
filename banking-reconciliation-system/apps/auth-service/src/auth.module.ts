@@ -24,6 +24,8 @@ import { StripeService } from './stripe.service';
 import { BillingController } from './billing.controller';
 import { AnalyticsService } from './analytics.service';
 import { AnalyticsController } from './analytics.controller';
+import { OnboardingService } from './onboarding.service';
+import { OnboardingController } from './onboarding.controller';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { MicrosoftStrategy } from './strategies/microsoft.strategy';
 import { AuditLoggingInterceptor } from './interceptors/audit-logging.interceptor';
@@ -32,6 +34,7 @@ import { Tenant } from '@app/shared/entities/tenant.entity';
 import { RefreshToken } from '@app/shared/entities/refresh-token.entity';
 import { ApiKey } from '@app/shared/entities/api-key.entity';
 import { AuditLog } from '@app/shared/entities/audit-log.entity';
+import { OnboardingChecklist } from '@app/shared/entities/onboarding-checklist.entity';
 import { SharedModule } from '@app/shared';
 
 @Module({
@@ -42,7 +45,7 @@ import { SharedModule } from '@app/shared';
       envFilePath: '.env',
     }),
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    TypeOrmModule.forFeature([User, Tenant, RefreshToken, ApiKey, AuditLog]),
+    TypeOrmModule.forFeature([User, Tenant, RefreshToken, ApiKey, AuditLog, OnboardingChecklist]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -71,7 +74,7 @@ import { SharedModule } from '@app/shared';
       },
     ]),
   ],
-  controllers: [AuthController, OAuthController, ApiKeyController, AuditLogController, TenantController, BillingController, AnalyticsController],
+  controllers: [AuthController, OAuthController, ApiKeyController, AuditLogController, TenantController, BillingController, AnalyticsController, OnboardingController],
   providers: [
     AuthService,
     EmailVerificationService,
@@ -85,6 +88,7 @@ import { SharedModule } from '@app/shared';
     TenantService,
     StripeService,
     AnalyticsService,
+    OnboardingService,
     GoogleStrategy,
     MicrosoftStrategy,
     {
@@ -104,6 +108,7 @@ import { SharedModule } from '@app/shared';
     TenantService,
     StripeService,
     AnalyticsService,
+    OnboardingService,
   ],
 })
 export class AuthModule {}
