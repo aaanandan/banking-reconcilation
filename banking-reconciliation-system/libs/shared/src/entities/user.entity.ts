@@ -111,7 +111,7 @@ export class User {
   // ═══════════════════════════════════════════════════════════
   // PASSWORD RESET
   // ═══════════════════════════════════════════════════════════
-  @Column({ nullable: true })
+  @Column({ nullable: true, type: 'varchar' })
   resetPasswordToken: string | null;
 
   @Column({ nullable: true, type: 'timestamp' })

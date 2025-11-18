@@ -31,7 +31,7 @@ export class RefreshToken {
   @Column({ type: 'timestamp' })
   expiresAt: Date;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, type: 'timestamp' })
   revokedAt: Date | null;
 
   @Column({ nullable: true })
