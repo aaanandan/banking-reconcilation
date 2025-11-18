@@ -4,3 +4,4 @@ export { AdvancedValidationPanel } from './AdvancedValidationPanel';
 export { MappingTemplatesManager } from './MappingTemplatesManager';
 export { BestPracticesPanel } from './BestPracticesPanel';
 export { PerformanceMonitor } from './PerformanceMonitor';
+export { EdgeCaseHandler } from './EdgeCaseHandler';
