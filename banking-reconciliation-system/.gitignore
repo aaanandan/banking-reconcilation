@@ -41,3 +41,7 @@ lerna-debug.log*
 .env.*.local
 .env
 .env.test
+.env.aws
+
+# AWS
+.aws/
