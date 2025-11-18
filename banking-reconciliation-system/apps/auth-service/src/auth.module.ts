@@ -30,6 +30,9 @@ import { FeatureFlagService } from './feature-flag.service';
 import { FeatureFlagController } from './feature-flag.controller';
 import { AdminDashboardService } from './admin-dashboard.service';
 import { AdminController } from './admin.controller';
+import { EmailService } from './email.service';
+import { EmailQueueProcessor } from './email-queue.processor';
+import { EmailController } from './email.controller';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { MicrosoftStrategy } from './strategies/microsoft.strategy';
 import { AuditLoggingInterceptor } from './interceptors/audit-logging.interceptor';
@@ -40,6 +43,7 @@ import { ApiKey } from '@app/shared/entities/api-key.entity';
 import { AuditLog } from '@app/shared/entities/audit-log.entity';
 import { OnboardingChecklist } from '@app/shared/entities/onboarding-checklist.entity';
 import { FeatureFlag } from '@app/shared/entities/feature-flag.entity';
+import { Notification } from '@app/shared/entities/notification.entity';
 import { SharedModule } from '@app/shared';
 
 @Module({
@@ -50,7 +54,7 @@ import { SharedModule } from '@app/shared';
       envFilePath: '.env',
     }),
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    TypeOrmModule.forFeature([User, Tenant, RefreshToken, ApiKey, AuditLog, OnboardingChecklist, FeatureFlag]),
+    TypeOrmModule.forFeature([User, Tenant, RefreshToken, ApiKey, AuditLog, OnboardingChecklist, FeatureFlag, Notification]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -79,7 +83,7 @@ import { SharedModule } from '@app/shared';
       },
     ]),
   ],
-  controllers: [AuthController, OAuthController, ApiKeyController, AuditLogController, TenantController, BillingController, AnalyticsController, OnboardingController, FeatureFlagController, AdminController],
+  controllers: [AuthController, OAuthController, ApiKeyController, AuditLogController, TenantController, BillingController, AnalyticsController, OnboardingController, FeatureFlagController, AdminController, EmailController],
   providers: [
     AuthService,
     EmailVerificationService,
@@ -96,6 +100,8 @@ import { SharedModule } from '@app/shared';
     OnboardingService,
     FeatureFlagService,
     AdminDashboardService,
+    EmailService,
+    EmailQueueProcessor,
     GoogleStrategy,
     MicrosoftStrategy,
     {
@@ -118,6 +124,8 @@ import { SharedModule } from '@app/shared';
     OnboardingService,
     FeatureFlagService,
     AdminDashboardService,
+    EmailService,
+    EmailQueueProcessor,
   ],
 })
 export class AuthModule {}

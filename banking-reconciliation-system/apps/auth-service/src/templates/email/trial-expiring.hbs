@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Trial is Expiring Soon</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            background: #f9fafb;
+            padding: 30px;
+            border: 1px solid #e5e7eb;
+            border-top: none;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .stat-box {
+            background: white;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid #e5e7eb;
+        }
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+        .plan-comparison {
+            background: white;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Your Trial Ends in {{daysRemaining}} Days</h1>
+    </div>
+
+    <div class="content">
+        <h2>Hi {{firstName}},</h2>
+
+        <p>Your {{platformName}} trial is ending soon. We hope you've enjoyed exploring our banking reconciliation platform!</p>
+
+        <div class="stat-box">
+            <h3>Your Trial Summary</h3>
+            <div class="stat-item">
+                <span>Reconciliations Completed</span>
+                <strong>{{reconciliationsCount}}</strong>
+            </div>
+            <div class="stat-item">
+                <span>Transactions Processed</span>
+                <strong>{{transactionsCount}}</strong>
+            </div>
+            <div class="stat-item">
+                <span>Time Saved</span>
+                <strong>~{{hoursSaved}} hours</strong>
+            </div>
+            <div class="stat-item">
+                <span>Match Rate</span>
+                <strong>{{matchRate}}%</strong>
+            </div>
+        </div>
+
+        <p>Don't lose access to your reconciliation data. Upgrade to a paid plan to continue using {{platformName}}.</p>
+
+        <div style="text-align: center;">
+            <a href="{{upgradeUrl}}" class="button">View Plans & Pricing</a>
+        </div>
+
+        <div class="plan-comparison">
+            <h3>Recommended Plan: {{recommendedPlan}}</h3>
+            <p>Based on your usage, we recommend the <strong>{{recommendedPlan}}</strong> plan:</p>
+            <ul>
+                {{#each planFeatures}}
+                <li>{{this}}</li>
+                {{/each}}
+            </ul>
+            <p><strong>Price:</strong> ${{planPrice}}/month</p>
+        </div>
+
+        <p>Questions? Our team is here to help. <a href="{{contactUrl}}">Contact us</a> to discuss which plan is right for you.</p>
+
+        <p>Best regards,<br>The {{platformName}} Team</p>
+    </div>
+
+    <div class="footer">
+        <p>© {{year}} {{platformName}}. All rights reserved.</p>
+        <p>
+            <a href="{{unsubscribeUrl}}">Unsubscribe</a> |
+            <a href="{{preferencesUrl}}">Email Preferences</a>
+        </p>
+    </div>
+</body>
+</html>
