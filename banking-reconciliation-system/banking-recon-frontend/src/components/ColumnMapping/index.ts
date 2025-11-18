@@ -5,3 +5,5 @@ export { MappingTemplatesManager } from './MappingTemplatesManager';
 export { BestPracticesPanel } from './BestPracticesPanel';
 export { PerformanceMonitor } from './PerformanceMonitor';
 export { EdgeCaseHandler } from './EdgeCaseHandler';
+export { MappingActionsToolbar } from './MappingActionsToolbar';
+export { MappingStatistics } from './MappingStatistics';
