@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { EmailVerificationService } from './email-verification.service';
 import { User } from '@app/shared/entities/user.entity';
 import { Tenant } from '@app/shared/entities/tenant.entity';
 import { SharedModule } from '@app/shared';
@@ -28,6 +29,7 @@ import { SharedModule } from '@app/shared';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [AuthService, EmailVerificationService],
+  exports: [EmailVerificationService],
 })
 export class AuthModule {}

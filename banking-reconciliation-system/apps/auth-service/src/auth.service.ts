@@ -1,6 +1,6 @@
 // apps/auth-service/src/auth.service.ts
 
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -10,15 +10,19 @@ import * as bcrypt from 'bcrypt';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
+import { EmailVerificationService } from './email-verification.service';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @InjectRepository(Tenant)
     private tenantRepository: Repository<Tenant>,
     private jwtService: JwtService,
+    private emailVerificationService: EmailVerificationService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResponseDto> {
@@ -61,8 +65,13 @@ export class AuthService {
       name: dto.name,
       role: 'tenant_admin', // First user is admin
       isActive: true,
+      emailVerified: false, // User needs to verify email
     });
     await this.userRepository.save(user);
+
+    // Send email verification (async, don't wait)
+    this.emailVerificationService.sendVerificationEmail(user.id)
+      .catch(err => this.logger.error(`Failed to send verification email: ${err.message}`));
 
     // Generate JWT with tenantId
     const token = this.jwtService.sign({

@@ -48,6 +48,19 @@ export class User {
   @Column({ default: true })
   isActive: boolean;
 
+  // ═══════════════════════════════════════════════════════════
+  // EMAIL VERIFICATION
+  // ═══════════════════════════════════════════════════════════
+  @Column({ default: false })
+  emailVerified: boolean;
+
+  @Column({ nullable: true })
+  emailVerificationToken: string;
+
+  @Column({ nullable: true, type: 'timestamp' })
+  emailVerificationExpires: Date;
+  // ═══════════════════════════════════════════════════════════
+
   @OneToMany(() => Reconciliation, recon => recon.user)
   reconciliations: Reconciliation[];
 
