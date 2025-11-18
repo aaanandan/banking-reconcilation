@@ -4,7 +4,7 @@ import { Register } from './pages/Register/Register';
 import { MainLayout } from './components/Layout/MainLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Dashboard } from './pages/Dashboard/Dashboard';
-import { UploadFiles } from './pages/Reconciliation/UploadFiles';
+import { UploadFiles, ColumnMapping } from './pages/Reconciliation';
 
 export const router = createBrowserRouter([
   {
@@ -22,6 +22,7 @@ export const router = createBrowserRouter([
       { index: true, element: <Navigate to="/dashboard" /> },
       { path: 'dashboard', element: <Dashboard /> },
       { path: 'reconciliation/new', element: <UploadFiles /> },
+      { path: 'reconciliation/mapping', element: <ColumnMapping /> },
     ],
   },
 ]);
