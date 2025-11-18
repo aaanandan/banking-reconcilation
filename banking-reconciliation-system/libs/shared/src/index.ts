@@ -4,6 +4,7 @@ export * from './entities';
 export * from './interfaces';
 export * from './utils';
 export * from './constants';
+export * from './config/security.config';
 export * from './decorators/tenant-context.decorator';
 export * from './middleware/tenant-isolation.middleware';
 export * from './repositories/tenant-aware.repository';
