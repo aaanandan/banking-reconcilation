@@ -12,6 +12,7 @@ import { LoginDto } from './dto/login.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { EmailVerificationService } from './email-verification.service';
 import { TwoFactorService } from './two-factor.service';
+import { SessionService } from './session.service';
 
 @Injectable()
 export class AuthService {
@@ -25,6 +26,7 @@ export class AuthService {
     private jwtService: JwtService,
     private emailVerificationService: EmailVerificationService,
     private twoFactorService: TwoFactorService,
+    private sessionService: SessionService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResponseDto> {
@@ -75,16 +77,14 @@ export class AuthService {
     this.emailVerificationService.sendVerificationEmail(user.id)
       .catch(err => this.logger.error(`Failed to send verification email: ${err.message}`));
 
-    // Generate JWT with tenantId
-    const token = this.jwtService.sign({
-      userId: user.id,
-      tenantId: tenant.tenantId,  // CRITICAL
-      email: user.email,
-      role: user.role,
-    });
+    // Generate token pair (access + refresh)
+    const tokenPair = await this.sessionService.generateTokenPair(user);
 
     return {
-      token,
+      token: tokenPair.accessToken, // Backward compatibility
+      accessToken: tokenPair.accessToken,
+      refreshToken: tokenPair.refreshToken,
+      expiresIn: tokenPair.expiresIn,
       user: {
         id: user.id,
         email: user.email,
@@ -131,16 +131,14 @@ export class AuthService {
       this.logger.log(`User ${user.id} logged in with 2FA`);
     }
 
-    // Generate JWT with tenantId
-    const token = this.jwtService.sign({
-      userId: user.id,
-      tenantId: user.tenantId,  // CRITICAL
-      email: user.email,
-      role: user.role,
-    });
+    // Generate token pair (access + refresh)
+    const tokenPair = await this.sessionService.generateTokenPair(user);
 
     return {
-      token,
+      token: tokenPair.accessToken, // Backward compatibility
+      accessToken: tokenPair.accessToken,
+      refreshToken: tokenPair.refreshToken,
+      expiresIn: tokenPair.expiresIn,
       user: {
         id: user.id,
         email: user.email,

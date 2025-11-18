@@ -7,6 +7,7 @@ import { Repository } from 'typeorm';
 import { User } from '@app/shared/entities/user.entity';
 import { Tenant } from '@app/shared/entities/tenant.entity';
 import { AuthResponseDto } from './dto/auth-response.dto';
+import { SessionService } from './session.service';
 
 export interface OAuthProfile {
   provider: 'google' | 'microsoft';
@@ -27,6 +28,7 @@ export class OAuthService {
     @InjectRepository(Tenant)
     private tenantRepository: Repository<Tenant>,
     private jwtService: JwtService,
+    private sessionService: SessionService,
   ) {}
 
   /**
@@ -74,18 +76,16 @@ export class OAuthService {
       user.emailVerified = true;
     }
 
-    // Generate JWT token
-    const token = this.jwtService.sign({
-      userId: user.id,
-      tenantId: user.tenantId,
-      email: user.email,
-      role: user.role,
-    });
+    // Generate token pair (access + refresh)
+    const tokenPair = await this.sessionService.generateTokenPair(user);
 
     this.logger.log(`OAuth login successful for user: ${user.id}`);
 
     return {
-      token,
+      token: tokenPair.accessToken, // Backward compatibility
+      accessToken: tokenPair.accessToken,
+      refreshToken: tokenPair.refreshToken,
+      expiresIn: tokenPair.expiresIn,
       user: {
         id: user.id,
         email: user.email,

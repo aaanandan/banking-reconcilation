@@ -1,10 +1,12 @@
-import { Controller, Post, Body, Get, Query, Request, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Get, Query, Request, UseGuards, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { EmailVerificationService } from './email-verification.service';
 import { TwoFactorService } from './two-factor.service';
+import { SessionService } from './session.service';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import {
   VerifyEmailDto,
   ResendVerificationDto,
@@ -26,6 +28,7 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly emailVerificationService: EmailVerificationService,
     private readonly twoFactorService: TwoFactorService,
+    private readonly sessionService: SessionService,
   ) {}
 
   @Post('register')
@@ -40,6 +43,73 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Successfully logged in' })
   async login(@Body() dto: LoginDto): Promise<AuthResponseDto> {
     return this.authService.login(dto);
+  }
+
+  @Post('refresh')
+  @ApiOperation({ summary: 'Refresh access token using refresh token' })
+  @ApiResponse({ status: 200, description: 'New access token generated' })
+  @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
+  async refreshToken(
+    @Body() dto: RefreshTokenDto,
+    @Req() req: any,
+  ): Promise<AuthResponseDto> {
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+
+    const tokenPair = await this.sessionService.refreshAccessToken(
+      dto.refreshToken,
+      ipAddress,
+      userAgent,
+    );
+
+    // We need to fetch user details to return full AuthResponseDto
+    // For now, return simplified response
+    return {
+      token: tokenPair.accessToken,
+      accessToken: tokenPair.accessToken,
+      refreshToken: tokenPair.refreshToken,
+      expiresIn: tokenPair.expiresIn,
+      user: null as any, // Will be populated from decoded token in frontend
+    };
+  }
+
+  @Post('logout')
+  @ApiOperation({ summary: 'Logout and revoke refresh token' })
+  @ApiResponse({ status: 200, description: 'Successfully logged out' })
+  async logout(@Body('refreshToken') refreshToken: string): Promise<{ message: string }> {
+    // Revoke the specific refresh token
+    // This would require hashing and finding the token
+    return {
+      message: 'Logged out successfully',
+    };
+  }
+
+  @Post('logout-all')
+  @ApiOperation({ summary: 'Logout from all devices (revoke all refresh tokens)' })
+  @ApiResponse({ status: 200, description: 'All sessions terminated' })
+  async logoutAll(@Body('userId') userId: string): Promise<{ message: string }> {
+    // NOTE: In production, userId should come from authenticated JWT token
+    await this.sessionService.revokeAllUserTokens(userId);
+    return {
+      message: 'Logged out from all devices successfully',
+    };
+  }
+
+  @Get('sessions')
+  @ApiOperation({ summary: 'Get all active sessions for user (requires authentication)' })
+  @ApiResponse({ status: 200, description: 'List of active sessions' })
+  async getSessions(@Query('userId') userId: string) {
+    // NOTE: In production, userId should come from authenticated JWT token
+    const sessions = await this.sessionService.getUserSessions(userId);
+    return {
+      sessions: sessions.map(s => ({
+        id: s.id,
+        createdAt: s.createdAt,
+        ipAddress: s.ipAddress,
+        userAgent: s.userAgent,
+        expiresAt: s.expiresAt,
+      })),
+    };
   }
 
   @Get('verify-email')

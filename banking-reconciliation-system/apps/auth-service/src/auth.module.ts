@@ -7,12 +7,14 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { EmailVerificationService } from './email-verification.service';
 import { TwoFactorService } from './two-factor.service';
+import { SessionService } from './session.service';
 import { OAuthService } from './oauth.service';
 import { OAuthController } from './oauth.controller';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { MicrosoftStrategy } from './strategies/microsoft.strategy';
 import { User } from '@app/shared/entities/user.entity';
 import { Tenant } from '@app/shared/entities/tenant.entity';
+import { RefreshToken } from '@app/shared/entities/refresh-token.entity';
 import { SharedModule } from '@app/shared';
 
 @Module({
@@ -23,7 +25,7 @@ import { SharedModule } from '@app/shared';
       envFilePath: '.env',
     }),
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    TypeOrmModule.forFeature([User, Tenant]),
+    TypeOrmModule.forFeature([User, Tenant, RefreshToken]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -40,10 +42,11 @@ import { SharedModule } from '@app/shared';
     AuthService,
     EmailVerificationService,
     TwoFactorService,
+    SessionService,
     OAuthService,
     GoogleStrategy,
     MicrosoftStrategy,
   ],
-  exports: [EmailVerificationService, TwoFactorService, OAuthService],
+  exports: [EmailVerificationService, TwoFactorService, SessionService, OAuthService],
 })
 export class AuthModule {}
