@@ -3,6 +3,7 @@ export * from './tenant.entity';
 export * from './user.entity';
 export * from './refresh-token.entity';
 export * from './api-key.entity';
+export * from './audit-log.entity';
 export * from './reconciliation.entity';
 export * from './bank-file.entity';
 export * from './ledger-file.entity';

@@ -14,6 +14,8 @@ import { EmailVerificationService } from './email-verification.service';
 import { TwoFactorService } from './two-factor.service';
 import { SessionService } from './session.service';
 import { BruteForceProtectionService } from './brute-force-protection.service';
+import { AuditLogService } from './audit-log.service';
+import { AuditEventType } from '@app/shared/entities/audit-log.entity';
 
 @Injectable()
 export class AuthService {
@@ -29,6 +31,7 @@ export class AuthService {
     private twoFactorService: TwoFactorService,
     private sessionService: SessionService,
     private bruteForceProtection: BruteForceProtectionService,
+    private auditLogService: AuditLogService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResponseDto> {
@@ -82,6 +85,19 @@ export class AuthService {
     // Generate token pair (access + refresh)
     const tokenPair = await this.sessionService.generateTokenPair(user);
 
+    // Audit log: User registration
+    this.auditLogService.logAuthEvent({
+      userId: user.id,
+      tenantId: tenant.tenantId,
+      eventType: AuditEventType.REGISTER,
+      isSuccessful: true,
+      metadata: {
+        email: user.email,
+        role: user.role,
+        companyName: tenant.companyName,
+      },
+    }).catch(err => this.logger.error(`Failed to log registration audit: ${err.message}`));
+
     return {
       token: tokenPair.accessToken, // Backward compatibility
       accessToken: tokenPair.accessToken,
@@ -116,6 +132,19 @@ export class AuthService {
     if (!isPasswordValid) {
       // Record failed login attempt
       const isLocked = await this.bruteForceProtection.recordFailedAttempt(user.id);
+
+      // Audit log: Failed login
+      this.auditLogService.logAuthEvent({
+        userId: user.id,
+        tenantId: user.tenantId,
+        eventType: AuditEventType.LOGIN_FAILURE,
+        isSuccessful: false,
+        failureReason: 'Invalid password',
+        metadata: {
+          email: user.email,
+          remainingAttempts: this.bruteForceProtection.getRemainingAttempts(user),
+        },
+      }).catch(err => this.logger.error(`Failed to log failed login audit: ${err.message}`));
 
       if (isLocked) {
         throw new UnauthorizedException(
@@ -157,6 +186,19 @@ export class AuthService {
 
     // Generate token pair (access + refresh)
     const tokenPair = await this.sessionService.generateTokenPair(user);
+
+    // Audit log: Successful login
+    this.auditLogService.logAuthEvent({
+      userId: user.id,
+      tenantId: user.tenantId,
+      eventType: AuditEventType.LOGIN_SUCCESS,
+      isSuccessful: true,
+      metadata: {
+        email: user.email,
+        role: user.role,
+        with2FA: user.twoFactorEnabled,
+      },
+    }).catch(err => this.logger.error(`Failed to log successful login audit: ${err.message}`));
 
     return {
       token: tokenPair.accessToken, // Backward compatibility

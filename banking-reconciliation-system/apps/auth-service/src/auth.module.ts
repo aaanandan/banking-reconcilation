@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -15,12 +16,16 @@ import { OAuthService } from './oauth.service';
 import { OAuthController } from './oauth.controller';
 import { ApiKeyService } from './api-key.service';
 import { ApiKeyController } from './api-key.controller';
+import { AuditLogService } from './audit-log.service';
+import { AuditLogController } from './audit-log.controller';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { MicrosoftStrategy } from './strategies/microsoft.strategy';
+import { AuditLoggingInterceptor } from './interceptors/audit-logging.interceptor';
 import { User } from '@app/shared/entities/user.entity';
 import { Tenant } from '@app/shared/entities/tenant.entity';
 import { RefreshToken } from '@app/shared/entities/refresh-token.entity';
 import { ApiKey } from '@app/shared/entities/api-key.entity';
+import { AuditLog } from '@app/shared/entities/audit-log.entity';
 import { SharedModule } from '@app/shared';
 
 @Module({
@@ -31,7 +36,7 @@ import { SharedModule } from '@app/shared';
       envFilePath: '.env',
     }),
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    TypeOrmModule.forFeature([User, Tenant, RefreshToken, ApiKey]),
+    TypeOrmModule.forFeature([User, Tenant, RefreshToken, ApiKey, AuditLog]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -60,7 +65,7 @@ import { SharedModule } from '@app/shared';
       },
     ]),
   ],
-  controllers: [AuthController, OAuthController, ApiKeyController],
+  controllers: [AuthController, OAuthController, ApiKeyController, AuditLogController],
   providers: [
     AuthService,
     EmailVerificationService,
@@ -70,8 +75,13 @@ import { SharedModule } from '@app/shared';
     PasswordResetService,
     OAuthService,
     ApiKeyService,
+    AuditLogService,
     GoogleStrategy,
     MicrosoftStrategy,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditLoggingInterceptor,
+    },
   ],
   exports: [
     EmailVerificationService,
@@ -81,6 +91,7 @@ import { SharedModule } from '@app/shared';
     PasswordResetService,
     OAuthService,
     ApiKeyService,
+    AuditLogService,
   ],
 })
 export class AuthModule {}
