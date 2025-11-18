@@ -11,6 +11,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { EmailVerificationService } from './email-verification.service';
+import { TwoFactorService } from './two-factor.service';
 
 @Injectable()
 export class AuthService {
@@ -23,6 +24,7 @@ export class AuthService {
     private tenantRepository: Repository<Tenant>,
     private jwtService: JwtService,
     private emailVerificationService: EmailVerificationService,
+    private twoFactorService: TwoFactorService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResponseDto> {
@@ -112,6 +114,21 @@ export class AuthService {
     // Check if user/tenant is active
     if (!user.isActive || user.tenant.status === 'suspended') {
       throw new UnauthorizedException('Account is not active');
+    }
+
+    // Check 2FA if enabled
+    if (user.twoFactorEnabled) {
+      if (!dto.twoFactorToken) {
+        throw new UnauthorizedException('2FA token required');
+      }
+
+      // Verify 2FA token
+      const isTokenValid = await this.twoFactorService.verifyToken(user.id, dto.twoFactorToken);
+      if (!isTokenValid) {
+        throw new UnauthorizedException('Invalid 2FA token');
+      }
+
+      this.logger.log(`User ${user.id} logged in with 2FA`);
     }
 
     // Generate JWT with tenantId

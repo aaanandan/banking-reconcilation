@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { EmailVerificationService } from './email-verification.service';
+import { TwoFactorService } from './two-factor.service';
 import { User } from '@app/shared/entities/user.entity';
 import { Tenant } from '@app/shared/entities/tenant.entity';
 import { SharedModule } from '@app/shared';
@@ -29,7 +30,7 @@ import { SharedModule } from '@app/shared';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, EmailVerificationService],
-  exports: [EmailVerificationService],
+  providers: [AuthService, EmailVerificationService, TwoFactorService],
+  exports: [EmailVerificationService, TwoFactorService],
 })
 export class AuthModule {}

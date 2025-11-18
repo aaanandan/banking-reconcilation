@@ -61,6 +61,16 @@ export class User {
   emailVerificationExpires: Date;
   // ═══════════════════════════════════════════════════════════
 
+  // ═══════════════════════════════════════════════════════════
+  // TWO-FACTOR AUTHENTICATION (2FA/TOTP)
+  // ═══════════════════════════════════════════════════════════
+  @Column({ default: false })
+  twoFactorEnabled: boolean;
+
+  @Column({ nullable: true })
+  twoFactorSecret: string; // Encrypted TOTP secret
+  // ═══════════════════════════════════════════════════════════
+
   @OneToMany(() => Reconciliation, recon => recon.user)
   reconciliations: Reconciliation[];
 
