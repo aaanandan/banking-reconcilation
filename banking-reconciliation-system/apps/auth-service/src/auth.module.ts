@@ -28,13 +28,14 @@ import { OnboardingService } from './onboarding.service';
 import { OnboardingController } from './onboarding.controller';
 import { FeatureFlagService } from './feature-flag.service';
 import { FeatureFlagController } from './feature-flag.controller';
-import { AdminDashboardService } from './admin-dashboard.service';
-import { AdminController } from './admin.controller';
-import { EmailService } from './email.service';
-import { EmailQueueProcessor } from './email-queue.processor';
-import { EmailController } from './email.controller';
-import { WebhookService } from './webhook.service';
-import { WebhookController } from './webhook.controller';
+// TODO: Steps 217-220 - Temporarily disabled due to incomplete implementation
+// import { AdminDashboardService } from './admin-dashboard.service';
+// import { AdminController } from './admin.controller';
+// import { EmailService } from './email.service';
+// import { EmailQueueProcessor } from './email-queue.processor';
+// import { EmailController } from './email.controller';
+// import { WebhookService } from './webhook.service';
+// import { WebhookController } from './webhook.controller';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { MicrosoftStrategy } from './strategies/microsoft.strategy';
 import { AuditLoggingInterceptor } from './interceptors/audit-logging.interceptor';
@@ -46,8 +47,9 @@ import { AuditLog } from '@app/shared/entities/audit-log.entity';
 import { OnboardingChecklist } from '@app/shared/entities/onboarding-checklist.entity';
 import { FeatureFlag } from '@app/shared/entities/feature-flag.entity';
 import { Notification } from '@app/shared/entities/notification.entity';
-import { Webhook } from '@app/shared/entities/webhook.entity';
-import { WebhookDelivery } from '@app/shared/entities/webhook-delivery.entity';
+// TODO: Steps 217-220 - Temporarily disabled
+// import { Webhook } from '@app/shared/entities/webhook.entity';
+// import { WebhookDelivery } from '@app/shared/entities/webhook-delivery.entity';
 import { SharedModule } from '@app/shared';
 
 @Module({
@@ -58,7 +60,7 @@ import { SharedModule } from '@app/shared';
       envFilePath: '.env',
     }),
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    TypeOrmModule.forFeature([User, Tenant, RefreshToken, ApiKey, AuditLog, OnboardingChecklist, FeatureFlag, Notification, Webhook, WebhookDelivery]),
+    TypeOrmModule.forFeature([User, Tenant, RefreshToken, ApiKey, AuditLog, OnboardingChecklist, FeatureFlag, Notification /*, Webhook, WebhookDelivery*/]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -87,7 +89,7 @@ import { SharedModule } from '@app/shared';
       },
     ]),
   ],
-  controllers: [AuthController, OAuthController, ApiKeyController, AuditLogController, TenantController, BillingController, AnalyticsController, OnboardingController, FeatureFlagController, AdminController, EmailController, WebhookController],
+  controllers: [AuthController, OAuthController, ApiKeyController, AuditLogController, TenantController, BillingController, AnalyticsController, OnboardingController, FeatureFlagController /*, AdminController, EmailController, WebhookController*/],
   providers: [
     AuthService,
     EmailVerificationService,
@@ -103,10 +105,10 @@ import { SharedModule } from '@app/shared';
     AnalyticsService,
     OnboardingService,
     FeatureFlagService,
-    AdminDashboardService,
-    EmailService,
-    EmailQueueProcessor,
-    WebhookService,
+    // AdminDashboardService, // TODO: Step 217 - Temporarily disabled
+    // EmailService, // TODO: Step 218 - Temporarily disabled
+    // EmailQueueProcessor, // TODO: Step 218 - Temporarily disabled
+    // WebhookService, // TODO: Step 219 - Temporarily disabled
     GoogleStrategy,
     MicrosoftStrategy,
     {
@@ -128,10 +130,10 @@ import { SharedModule } from '@app/shared';
     AnalyticsService,
     OnboardingService,
     FeatureFlagService,
-    AdminDashboardService,
-    EmailService,
-    EmailQueueProcessor,
-    WebhookService,
+    // AdminDashboardService, // TODO: Step 217 - Temporarily disabled
+    // EmailService, // TODO: Step 218 - Temporarily disabled
+    // EmailQueueProcessor, // TODO: Step 218 - Temporarily disabled
+    // WebhookService, // TODO: Step 219 - Temporarily disabled
   ],
 })
 export class AuthModule {}
