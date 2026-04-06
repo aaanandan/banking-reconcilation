@@ -3,7 +3,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
-import { AuthModule } from '../../src/auth.module';
+import { TestAuthModule } from './test-auth.module';
+import { ConfigService } from '@nestjs/config';
 
 /**
  * Security Tests for Authentication Service
@@ -22,12 +23,39 @@ describe('Authentication Security Tests', () => {
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AuthModule],
-    }).compile();
+      imports: [TestAuthModule],
+    })
+      .overrideProvider(ConfigService)
+      .useValue({
+        get: (key: string, defaultValue?: any) => {
+          const config = {
+            JWT_SECRET: 'test-jwt-secret',
+            GOOGLE_CLIENT_ID: 'test-google-client-id',
+            GOOGLE_CLIENT_SECRET: 'test-google-client-secret',
+            GOOGLE_CALLBACK_URL: 'http://localhost:3000/auth/google/callback',
+            MICROSOFT_CLIENT_ID: 'test-microsoft-client-id',
+            MICROSOFT_CLIENT_SECRET: 'test-microsoft-client-secret',
+            MICROSOFT_CALLBACK_URL: 'http://localhost:3000/auth/microsoft/callback',
+            DATABASE_URL: 'sqlite://:memory:',
+            STRIPE_SECRET_KEY: 'sk_test_mock',
+            SMTP_HOST: 'smtp.test.com',
+            SMTP_PORT: '587',
+            SMTP_USER: 'test@test.com',
+            SMTP_PASSWORD: 'test',
+            DB_HOST: ':memory:',
+            DB_PORT: 0,
+            DB_USERNAME: '',
+            DB_PASSWORD: '',
+            DB_DATABASE: ':memory:',
+          };
+          return config[key] || defaultValue;
+        },
+      })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();
-  });
+  }, 30000);
 
   afterAll(async () => {
     await app.close();
