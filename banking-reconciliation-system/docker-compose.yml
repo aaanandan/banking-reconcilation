@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: banking-postgres
+    environment:
+      POSTGRES_DB: banking_reconciliation
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - banking-network
+
+  # Prometheus - Metrics Collection
+  # Step 221: Prometheus deployed for local monitoring
+  # Services will be instrumented in Step 222
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: banking-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - banking-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    extra_hosts:
+      # Allow Prometheus to scrape services running on host machine
+      # Services will run via npm start:dev (not containerized yet)
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  postgres_data:
+    driver: local
+  prometheus_data:
+    driver: local
+
+networks:
+  banking-network:
+    driver: bridge
