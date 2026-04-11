@@ -1,0 +1,34 @@
+# Grafana Datasource Configuration
+# Step 223: Grafana deployment - Prometheus datasource
+
+apiVersion: 1
+
+datasources:
+  # Prometheus datasource for metrics
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      httpMethod: POST
+      timeInterval: 15s
+      # Query timeout
+      queryTimeout: 60s
+      # Custom query parameters
+      customQueryParameters: ''
+    version: 1
+
+  # You can add more datasources here
+  # Example: PostgreSQL for direct database queries
+  # - name: PostgreSQL
+  #   type: postgres
+  #   url: postgres:5432
+  #   database: banking_reconciliation
+  #   user: postgres
+  #   secureJsonData:
+  #     password: postgres_dev_password
+  #   jsonData:
+  #     sslmode: disable
+  #     postgresVersion: 1500

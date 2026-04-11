@@ -1,0 +1,24 @@
+# Grafana Dashboard Provisioning Configuration
+# Step 223: Grafana deployment - Dashboard provisioning
+
+apiVersion: 1
+
+providers:
+  # Dashboard provider for JSON files
+  - name: 'Banking Reconciliation Dashboards'
+    orgId: 1
+    folder: 'Banking Reconciliation'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: true
+
+  # Default dashboards (will be created in Step 224)
+  # - System Overview
+  # - Business Metrics
+  # - Database Performance
+  # - Authentication & Security
+  # - Tenant Analytics
