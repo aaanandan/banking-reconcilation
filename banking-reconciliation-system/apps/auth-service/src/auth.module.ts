@@ -5,8 +5,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { PrometheusModule, makeCounterProvider, makeGaugeProvider, makeHistogramProvider } from '@willsoto/nestjs-prometheus';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { MetricsService } from './metrics.service';
 import { EmailVerificationService } from './email-verification.service';
 import { TwoFactorService } from './two-factor.service';
 import { SessionService } from './session.service';
@@ -58,6 +60,17 @@ import { SharedModule } from '@app/shared';
       envFilePath: '.env',
     }),
     PassportModule.register({ defaultStrategy: 'jwt' }),
+    // Prometheus metrics - Step 222
+    PrometheusModule.register({
+      defaultMetrics: {
+        enabled: true,
+      },
+      path: '/metrics',
+      defaultLabels: {
+        app: 'auth-service',
+        environment: process.env.NODE_ENV || 'development',
+      },
+    }),
     TypeOrmModule.forFeature([User, Tenant, RefreshToken, ApiKey, AuditLog, OnboardingChecklist, FeatureFlag, Notification, Webhook, WebhookDelivery]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -113,6 +126,34 @@ import { SharedModule } from '@app/shared';
       provide: APP_INTERCEPTOR,
       useClass: AuditLoggingInterceptor,
     },
+    // Metrics Service - Step 222
+    MetricsService,
+    // Prometheus Metric Providers - Step 222
+    makeCounterProvider({ name: 'auth_login_attempts_total', help: 'Total number of login attempts' }),
+    makeCounterProvider({ name: 'auth_login_success_total', help: 'Total number of successful logins' }),
+    makeCounterProvider({ name: 'auth_login_failure_total', help: 'Total number of failed logins' }),
+    makeCounterProvider({ name: 'auth_registration_total', help: 'Total number of user registrations' }),
+    makeGaugeProvider({ name: 'tenants_active_total', help: 'Number of active tenants' }),
+    makeCounterProvider({ name: 'tenants_created_total', help: 'Total number of tenants created' }),
+    makeCounterProvider({ name: 'tenants_suspended_total', help: 'Total number of tenants suspended' }),
+    makeGaugeProvider({ name: 'subscriptions_active_total', help: 'Number of active subscriptions' }),
+    makeCounterProvider({ name: 'subscriptions_created_total', help: 'Total number of subscriptions created' }),
+    makeCounterProvider({ name: 'subscriptions_cancelled_total', help: 'Total number of subscriptions cancelled' }),
+    makeCounterProvider({ name: 'subscription_revenue_total', help: 'Total subscription revenue' }),
+    makeGaugeProvider({ name: 'api_keys_active_total', help: 'Number of active API keys' }),
+    makeCounterProvider({ name: 'api_key_requests_total', help: 'Total number of API key requests' }),
+    makeGaugeProvider({ name: 'security_2fa_enabled_total', help: 'Number of users with 2FA enabled' }),
+    makeCounterProvider({ name: 'security_failed_2fa_total', help: 'Total number of failed 2FA attempts' }),
+    makeCounterProvider({ name: 'security_password_reset_total', help: 'Total number of password resets' }),
+    makeCounterProvider({ name: 'webhooks_delivered_total', help: 'Total number of webhooks delivered' }),
+    makeCounterProvider({ name: 'webhooks_failed_total', help: 'Total number of failed webhook deliveries' }),
+    makeCounterProvider({ name: 'emails_sent_total', help: 'Total number of emails sent' }),
+    makeCounterProvider({ name: 'emails_failed_total', help: 'Total number of failed email deliveries' }),
+    makeHistogramProvider({
+      name: 'http_request_duration_seconds',
+      help: 'HTTP request duration in seconds',
+      buckets: [0.1, 0.5, 1, 2, 5, 10],
+    }),
   ],
   exports: [
     EmailVerificationService,
@@ -132,6 +173,7 @@ import { SharedModule } from '@app/shared';
     EmailService,
     EmailQueueProcessor,
     WebhookService,
+    MetricsService,
   ],
 })
 export class AuthModule {}
