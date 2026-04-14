@@ -1,0 +1,168 @@
+# Alertmanager Configuration for Banking Reconciliation Platform
+# Step 226: Configure Slack Notifications
+
+global:
+  resolve_timeout: 5m
+  # Slack API URL - set SLACK_WEBHOOK_URL environment variable
+  slack_api_url: '${SLACK_WEBHOOK_URL}'
+
+# Alert routing
+route:
+  receiver: 'default'
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+  routes:
+    # Critical alerts - immediate Slack notification
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      group_wait: 10s
+      repeat_interval: 1h
+
+    # Security alerts - immediate Slack notification (before warning to take priority)
+    - match:
+        category: security
+      receiver: 'security-alerts'
+      group_wait: 10s
+      repeat_interval: 30m
+
+    # Warning alerts - batched Slack notification
+    - match:
+        severity: warning
+      receiver: 'warning-alerts'
+      group_wait: 1m
+      repeat_interval: 12h
+
+    # Business alerts - to business team channel
+    - match:
+        category: business
+      receiver: 'business-alerts'
+      group_wait: 2m
+      repeat_interval: 6h
+
+    # Info alerts - daily digest
+    - match:
+        severity: info
+      receiver: 'info-alerts'
+      group_wait: 5m
+      repeat_interval: 24h
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'cluster', 'service']
+
+  - source_match:
+      alertname: 'ServiceDown'
+    target_match_re:
+      alertname: '^(High|Slow|Low).*'
+    equal: ['service']
+
+# Slack message templates
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+receivers:
+  # Default receiver (fallback)
+  - name: 'default'
+    slack_configs:
+      - channel: '#alerts-general'
+        send_resolved: true
+        title: '{{ if eq .Status "firing" }}ALERT{{ else }}RESOLVED{{ end }}: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Severity:* {{ .Labels.severity }}
+          *Category:* {{ .Labels.category }}
+          *Runbook:* {{ .Annotations.runbook }}
+          {{ end }}
+        color: '{{ if eq .Status "firing" }}{{ if eq .CommonLabels.severity "critical" }}danger{{ else }}warning{{ end }}{{ else }}good{{ end }}'
+
+  # Critical alerts receiver — #alerts-critical channel
+  - name: 'critical-alerts'
+    slack_configs:
+      - channel: '#alerts-critical'
+        send_resolved: true
+        title: ':rotating_light: CRITICAL: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Service:* {{ .Labels.service }}{{ if .Labels.job }} / {{ .Labels.job }}{{ end }}
+          *Runbook:* {{ .Annotations.runbook }}
+          *Started:* {{ .StartsAt | since }}
+          {{ end }}
+        color: 'danger'
+        icon_emoji: ':fire:'
+        username: 'Banking Alertmanager'
+
+  # Warning alerts receiver — #alerts-warning channel
+  - name: 'warning-alerts'
+    slack_configs:
+      - channel: '#alerts-warning'
+        send_resolved: true
+        title: ':warning: WARNING: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Runbook:* {{ .Annotations.runbook }}
+          {{ end }}
+        color: 'warning'
+        icon_emoji: ':warning:'
+        username: 'Banking Alertmanager'
+
+  # Info alerts receiver — #alerts-info channel
+  - name: 'info-alerts'
+    slack_configs:
+      - channel: '#alerts-info'
+        send_resolved: true
+        title: ':information_source: INFO: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+        color: '#439FE0'
+        icon_emoji: ':information_source:'
+        username: 'Banking Alertmanager'
+
+  # Security alerts receiver — #security-alerts channel
+  - name: 'security-alerts'
+    slack_configs:
+      - channel: '#security-alerts'
+        send_resolved: true
+        title: ':lock: SECURITY: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Severity:* {{ .Labels.severity }}
+          *Runbook:* {{ .Annotations.runbook }}
+          *Time:* {{ .StartsAt | since }}
+          {{ end }}
+        color: 'danger'
+        icon_emoji: ':lock:'
+        username: 'Banking Security Monitor'
+
+  # Business alerts receiver — #business-alerts channel
+  - name: 'business-alerts'
+    slack_configs:
+      - channel: '#business-alerts'
+        send_resolved: true
+        title: ':bar_chart: BUSINESS: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Runbook:* {{ .Annotations.runbook }}
+          {{ end }}
+        color: '{{ if eq .Status "firing" }}warning{{ else }}good{{ end }}'
+        icon_emoji: ':bar_chart:'
+        username: 'Banking Business Monitor'
