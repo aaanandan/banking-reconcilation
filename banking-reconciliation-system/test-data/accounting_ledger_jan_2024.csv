@@ -1,0 +1,13 @@
+Date,Particulars,Amount,Type,Account Code
+15/01/2024,Office Rent Payment,5000.00,Expense,EXP001
+16/01/2024,Software License Fee,1200.50,Expense,EXP002
+15/01/2024,Vendor Payment - ABC Corp,8000.00,Expense,EXP003
+18/01/2024,Client Payment Received,25000.00,Income,INC001
+18/01/2024,Salary Credit,45000.00,Income,INC002
+20/01/2024,Equipment Purchase,3500.00,Asset,AST001
+21/01/2024,Sales Invoice Payment,15000.00,Income,INC003
+22/01/2024,Office Supplies,450.00,Expense,EXP004
+23/01/2024,Contractor Payment,6000.00,Expense,EXP005
+25/01/2024,Consulting Payment,12000.00,Income,INC004
+27/01/2024,Travel Expenses,3200.00,Expense,EXP006
+30/01/2024,Commission Received,8500.00,Income,INC005
