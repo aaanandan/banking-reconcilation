@@ -165,6 +165,25 @@ services:
       timeout: 10s
       retries: 5
 
+  # Filebeat - Log Forwarding Agent
+  # Step 228: Forwards service logs to Logstash
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.13.0
+    container_name: banking-filebeat
+    user: root
+    volumes:
+      - ./monitoring/elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - filebeat_data:/var/lib/filebeat
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+    networks:
+      - banking-network
+    depends_on:
+      - logstash
+    restart: unless-stopped
+
   # Grafana - Metrics Visualization
   # Step 223: Grafana deployed for dashboard visualization
   grafana:
@@ -206,6 +225,8 @@ volumes:
   alertmanager_data:
     driver: local
   elasticsearch_data:
+    driver: local
+  filebeat_data:
     driver: local
 
 networks:

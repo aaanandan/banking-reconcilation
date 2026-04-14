@@ -1,7 +1,9 @@
 // Step 222: Auth Service with Prometheus metrics endpoint
+// Step 228: Structured JSON logging for ELK forwarding
 // Banking Reconciliation Platform
 
 const express = require('express');
+const logger = require('./logger/logger');
 const {
   register,
   loginAttemptsCounter,
@@ -19,6 +21,9 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(express.json());
+
+// Structured JSON request logging (Step 228 — feeds Filebeat → Logstash → ES)
+app.use(logger.httpMiddleware());
 
 // HTTP request duration middleware
 app.use((req, res, next) => {
@@ -73,7 +78,6 @@ app.post('/auth/register', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Auth Service running on port ${PORT}`);
-  console.log(`Metrics available at http://localhost:${PORT}/metrics`);
-  console.log(`Health check at http://localhost:${PORT}/health`);
+  logger.info('Auth Service started', { port: PORT });
+  logger.info('Metrics endpoint ready', { url: `http://localhost:${PORT}/metrics` });
 });
