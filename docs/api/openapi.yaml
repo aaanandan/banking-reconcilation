@@ -1,0 +1,571 @@
+openapi: 3.0.0
+info:
+  title: Banking Reconciliation System API
+  description: Complete API for multi-tenant banking reconciliation
+  version: 1.0.0
+  contact:
+    email: api@banking-recon.com
+
+servers:
+  - url: https://api.banking-recon.com/v1
+    description: Production
+  - url: https://staging-api.banking-recon.com/v1
+    description: Staging
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+          enum: [super_admin, tenant_admin, accountant, viewer]
+        tenantId:
+          type: string
+
+    Reconciliation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [in_progress, paused, completed]
+        totalTransactions:
+          type: integer
+        matchedCount:
+          type: integer
+        unmatchedCount:
+          type: integer
+        convergenceRate:
+          type: number
+          format: float
+        createdAt:
+          type: string
+          format: date-time
+
+    DateRange:
+      type: object
+      properties:
+        includeAll:
+          type: boolean
+          default: true
+        fromDate:
+          type: string
+          format: date
+        toDate:
+          type: string
+          format: date
+
+    PricingPlan:
+      type: object
+      properties:
+        name:
+          type: string
+        price:
+          type: number
+          nullable: true
+        interval:
+          type: string
+        features:
+          type: object
+
+    UsageSummary:
+      type: object
+      properties:
+        plan:
+          type: string
+        usage:
+          type: object
+          properties:
+            transactionsThisMonth:
+              type: integer
+            bankAccounts:
+              type: integer
+            storageMB:
+              type: number
+        quotas:
+          type: object
+          properties:
+            maxTransactionsPerMonth:
+              type: integer
+            maxBankAccounts:
+              type: integer
+            maxStorageMB:
+              type: integer
+
+    Invoice:
+      type: object
+      properties:
+        id:
+          type: string
+        number:
+          type: string
+        status:
+          type: string
+        amountDue:
+          type: integer
+        amountPaid:
+          type: integer
+        currency:
+          type: string
+        periodStart:
+          type: string
+          format: date-time
+        periodEnd:
+          type: string
+          format: date-time
+        hostedInvoiceUrl:
+          type: string
+          nullable: true
+        invoicePdf:
+          type: string
+          nullable: true
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+
+paths:
+  # ─────────────────────────────────────────────────
+  # Authentication
+  # ─────────────────────────────────────────────────
+  /auth/login:
+    post:
+      summary: User login
+      tags: [Authentication]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/register:
+    post:
+      summary: Register new tenant + admin user
+      tags: [Authentication]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, name, tenantName]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                name:
+                  type: string
+                tenantName:
+                  type: string
+      responses:
+        '201':
+          description: Tenant and admin user created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '409':
+          description: Email already registered
+
+  # ─────────────────────────────────────────────────
+  # Reconciliations
+  # ─────────────────────────────────────────────────
+  /reconciliations:
+    get:
+      summary: List reconciliations
+      tags: [Reconciliations]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [in_progress, paused, completed]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of reconciliations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Reconciliation'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+
+    post:
+      summary: Create reconciliation
+      tags: [Reconciliations]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                bankFiles:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                ledgerFile:
+                  type: string
+                  format: binary
+                dateRange:
+                  $ref: '#/components/schemas/DateRange'
+      responses:
+        '201':
+          description: Reconciliation created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reconciliation'
+
+  /reconciliations/{id}:
+    get:
+      summary: Get reconciliation by ID
+      tags: [Reconciliations]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Reconciliation detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reconciliation'
+        '404':
+          description: Not found
+
+  # ─────────────────────────────────────────────────
+  # Billing
+  # ─────────────────────────────────────────────────
+  /billing/plans:
+    get:
+      summary: List all pricing plans
+      tags: [Billing]
+      security: []
+      responses:
+        '200':
+          description: Pricing plans
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plans:
+                    type: object
+                    additionalProperties:
+                      $ref: '#/components/schemas/PricingPlan'
+
+  /billing/subscribe:
+    post:
+      summary: Create new subscription
+      tags: [Billing]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, name, tenantId, planKey]
+              properties:
+                email:
+                  type: string
+                  format: email
+                name:
+                  type: string
+                tenantId:
+                  type: string
+                planKey:
+                  type: string
+                  enum: [starter, professional, enterprise]
+      responses:
+        '200':
+          description: Subscription created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subscriptionId:
+                    type: string
+                  customerId:
+                    type: string
+                  clientSecret:
+                    type: string
+
+  /billing/change-plan:
+    post:
+      summary: Upgrade or downgrade subscription
+      tags: [Billing]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subscriptionId, newPlanKey, tenantId]
+              properties:
+                subscriptionId:
+                  type: string
+                newPlanKey:
+                  type: string
+                tenantId:
+                  type: string
+      responses:
+        '200':
+          description: Plan changed
+
+  /billing/cancel:
+    post:
+      summary: Cancel subscription
+      tags: [Billing]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subscriptionId, tenantId]
+              properties:
+                subscriptionId:
+                  type: string
+                tenantId:
+                  type: string
+      responses:
+        '200':
+          description: Subscription cancelled
+
+  /billing/usage/{tenantId}:
+    get:
+      summary: Get usage summary for tenant
+      tags: [Billing]
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Usage summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageSummary'
+
+  /billing/quota/{tenantId}/{resource}:
+    get:
+      summary: Check quota for a resource
+      tags: [Billing]
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: resource
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [transactions, bankAccounts, storage, users]
+      responses:
+        '200':
+          description: Quota check result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  allowed:
+                    type: boolean
+                  tenantId:
+                    type: string
+                  resource:
+                    type: string
+
+  /billing/invoices/{customerId}:
+    get:
+      summary: List invoices for customer
+      tags: [Billing]
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Invoice list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  invoices:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Invoice'
+
+  /billing/refund:
+    post:
+      summary: Issue a refund
+      tags: [Billing]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [paymentIntentId]
+              properties:
+                paymentIntentId:
+                  type: string
+                amount:
+                  type: integer
+                  description: Amount in cents; omit for full refund
+      responses:
+        '200':
+          description: Refund created
+
+  /billing/webhook:
+    post:
+      summary: Stripe webhook receiver
+      tags: [Billing]
+      security: []
+      parameters:
+        - name: stripe-signature
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Webhook received
+        '400':
+          description: Invalid signature
+
+  # ─────────────────────────────────────────────────
+  # Health
+  # ─────────────────────────────────────────────────
+  /health:
+    get:
+      summary: Service health check
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  service:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /metrics:
+    get:
+      summary: Prometheus metrics endpoint
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: Prometheus text format metrics
+          content:
+            text/plain:
+              schema:
+                type: string
