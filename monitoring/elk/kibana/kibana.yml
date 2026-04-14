@@ -1,0 +1,28 @@
+# Kibana Configuration for Banking Reconciliation Platform
+# Step 227: Deploy ELK Stack
+
+server.port: 5601
+server.host: "0.0.0.0"
+server.name: "banking-kibana"
+
+# Elasticsearch connection
+elasticsearch.hosts: ["http://elasticsearch:9200"]
+elasticsearch.requestTimeout: 30000
+
+# Logging
+logging.appenders.default:
+  type: console
+  layout:
+    type: pattern
+    pattern: "[%date] [%level] [%logger] %message"
+logging.root.level: warn
+
+# Telemetry
+telemetry.enabled: false
+telemetry.optIn: false
+
+# Security (disabled for local dev)
+xpack.security.enabled: false
+
+# Index pattern defaults
+kibana.defaultAppId: "discover"

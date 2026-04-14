@@ -1,0 +1,41 @@
+# Step 238: Cost Monitoring
+# Banking Reconciliation Platform
+
+cost_monitoring:
+  # Infrastructure cost targets (local/dev)
+  local_dev:
+    docker_services: 9          # containers running
+    estimated_ram_gb: 6         # total memory for all services
+    estimated_cpu_cores: 2      # CPU allocation
+
+  # Production cost budgets (when deployed to cloud)
+  production:
+    monthly_budget_usd: 500
+    alert_threshold_percent: 80  # alert at 80% of budget
+
+  # Per-service cost allocation tags
+  services:
+    auth-service:
+      tier: saas-platform
+      cost_center: platform
+    prometheus:
+      tier: monitoring
+      cost_center: ops
+    grafana:
+      tier: monitoring
+      cost_center: ops
+    elasticsearch:
+      tier: logging
+      cost_center: ops
+    jaeger:
+      tier: tracing
+      cost_center: ops
+
+  # Cost optimisation rules
+  optimisation:
+    # Elasticsearch: use ILM to delete logs older than 30 days
+    elasticsearch_retention_days: 30
+    # Prometheus: retain 15 days of metrics
+    prometheus_retention_days: 15
+    # Grafana: use read-only datasources in prod
+    grafana_readonly_prod: true

@@ -1,7 +1,16 @@
 // Step 222: Auth Service with Prometheus metrics endpoint
+// Step 228: Structured JSON logging for ELK forwarding
+// Step 230: Sentry error tracking
+// Step 231: Distributed tracing (OpenTelemetry + Jaeger)
 // Banking Reconciliation Platform
 
+// Tracing must be initialised before all other requires
+const { initTracing, tracingMiddleware } = require('../../monitoring/tracing/tracer');
+initTracing();
+
 const express = require('express');
+const logger = require('./logger/logger');
+const { initSentry, sentryRequestHandler, sentryErrorHandler, captureException } = require('../../monitoring/sentry/sentry');
 const {
   register,
   loginAttemptsCounter,
@@ -15,10 +24,20 @@ const {
   httpRequestDurationHistogram,
 } = require('./metrics');
 
+// Initialise Sentry before express app (Step 230)
+initSentry();
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Sentry request handler — must be first middleware
+app.use(sentryRequestHandler());
+// Distributed tracing middleware — adds X-Trace-Id / X-Span-Id headers (Step 231)
+app.use(tracingMiddleware());
 app.use(express.json());
+
+// Structured JSON request logging (Step 228 — feeds Filebeat → Logstash → ES)
+app.use(logger.httpMiddleware());
 
 // HTTP request duration middleware
 app.use((req, res, next) => {
@@ -72,8 +91,17 @@ app.post('/auth/register', (req, res) => {
   res.json({ success: true, tenantId });
 });
 
+// Sentry error handler — must be last middleware
+app.use(sentryErrorHandler());
+
+// Generic error handler
+app.use((err, req, res, next) => {
+  logger.error('Unhandled error', { error: err.message, stack: err.stack });
+  captureException(err, { path: req.path, method: req.method });
+  res.status(500).json({ error: 'Internal server error' });
+});
+
 app.listen(PORT, () => {
-  console.log(`Auth Service running on port ${PORT}`);
-  console.log(`Metrics available at http://localhost:${PORT}/metrics`);
-  console.log(`Health check at http://localhost:${PORT}/health`);
+  logger.info('Auth Service started', { port: PORT });
+  logger.info('Metrics endpoint ready', { url: `http://localhost:${PORT}/metrics` });
 });

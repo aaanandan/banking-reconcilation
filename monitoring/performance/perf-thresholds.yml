@@ -1,0 +1,55 @@
+# Step 237: Performance Monitoring — Thresholds and Baselines
+# Banking Reconciliation Platform
+
+performance:
+  # HTTP API thresholds
+  api:
+    response_time_p50_ms: 200
+    response_time_p95_ms: 2000
+    response_time_p99_ms: 5000
+    error_rate_percent: 0.1
+    requests_per_second_max: 500
+
+  # Auth service specific
+  auth:
+    login_p95_ms: 500
+    token_validation_p95_ms: 50
+    registration_p95_ms: 1000
+
+  # Reconciliation processing
+  reconciliation:
+    job_completion_minutes: 5         # for 1000 transactions
+    match_rate_minimum_percent: 85
+    transactions_per_second: 200
+
+  # Database
+  database:
+    query_p95_ms: 100
+    query_p99_ms: 500
+    connection_pool_max: 100
+    slow_query_threshold_ms: 1000
+
+  # Memory limits
+  memory:
+    auth_service_max_mb: 512
+    heap_used_percent_max: 80
+    rss_max_mb: 1024
+
+  # Event loop
+  nodejs:
+    event_loop_lag_max_ms: 100
+
+# Prometheus alert expressions matching these thresholds
+# (already configured in monitoring/prometheus/alerts/alerts.yml)
+alerts:
+  SlowResponseTime:
+    expr: "histogram_quantile(0.95, ...) > 2"
+    threshold_seconds: 2
+
+  HighMemoryUsage:
+    expr: "process_resident_memory_bytes > 2GB"
+    threshold_gb: 2
+
+  HighEventLoopLag:
+    expr: "nodejs_eventloop_lag_seconds > 0.1"
+    threshold_seconds: 0.1

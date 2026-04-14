@@ -80,6 +80,132 @@ services:
     depends_on:
       - prometheus
 
+  # Jaeger - Distributed Tracing
+  # Step 231: Implement distributed tracing
+  jaeger:
+    image: jaegertracing/all-in-one:1.56
+    container_name: banking-jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - SPAN_STORAGE_TYPE=memory
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "14268:14268"   # HTTP collector
+      - "4317:4317"     # OTLP gRPC
+      - "4318:4318"     # OTLP HTTP
+    networks:
+      - banking-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:16686/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── ELK Stack ──────────────────────────────────────────────────────────────
+  # Step 227: Deploy ELK Stack for centralised log management
+
+  # Elasticsearch - Log Storage & Search
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    container_name: banking-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+      - cluster.name=banking-recon-logs
+      - node.name=banking-es-node-1
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+      - ./monitoring/elk/elasticsearch/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
+    networks:
+      - banking-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\\|yellow\"'"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  # Logstash - Log Processing Pipeline
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.13.0
+    container_name: banking-logstash
+    ports:
+      - "5044:5044"   # Filebeat input
+      - "5000:5000"   # TCP direct input
+      - "5001:5001/udp" # UDP syslog
+      - "9600:9600"   # Logstash API
+    volumes:
+      - ./monitoring/elk/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+      - ./monitoring/elk/logstash/pipeline/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+    environment:
+      - LS_JAVA_OPTS=-Xms256m -Xmx256m
+      - NODE_ENV=${NODE_ENV:-development}
+    networks:
+      - banking-network
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-s", "http://localhost:9600/_node/stats"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Kibana - Log Visualisation
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.0
+    container_name: banking-kibana
+    ports:
+      - "5601:5601"
+    volumes:
+      - ./monitoring/elk/kibana/kibana.yml:/usr/share/kibana/config/kibana.yml:ro
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    networks:
+      - banking-network
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-s", "http://localhost:5601/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Filebeat - Log Forwarding Agent
+  # Step 228: Forwards service logs to Logstash
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.13.0
+    container_name: banking-filebeat
+    user: root
+    volumes:
+      - ./monitoring/elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - filebeat_data:/var/lib/filebeat
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+    networks:
+      - banking-network
+    depends_on:
+      - logstash
+    restart: unless-stopped
+
   # Grafana - Metrics Visualization
   # Step 223: Grafana deployed for dashboard visualization
   grafana:
@@ -119,6 +245,10 @@ volumes:
   grafana_data:
     driver: local
   alertmanager_data:
+    driver: local
+  elasticsearch_data:
+    driver: local
+  filebeat_data:
     driver: local
 
 networks:

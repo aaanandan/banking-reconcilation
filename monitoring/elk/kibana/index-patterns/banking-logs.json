@@ -1,0 +1,32 @@
+{
+  "version": "8.13.0",
+  "objects": [
+    {
+      "id": "banking-logs-*",
+      "type": "index-pattern",
+      "attributes": {
+        "title": "logs-*",
+        "timeFieldName": "@timestamp",
+        "fields": "[]"
+      }
+    },
+    {
+      "id": "banking-auth-logs",
+      "type": "index-pattern",
+      "attributes": {
+        "title": "logs-auth-service-*",
+        "timeFieldName": "@timestamp",
+        "fields": "[]"
+      }
+    },
+    {
+      "id": "banking-all-services",
+      "type": "index-pattern",
+      "attributes": {
+        "title": "logs-*",
+        "timeFieldName": "@timestamp",
+        "fields": "[]"
+      }
+    }
+  ]
+}

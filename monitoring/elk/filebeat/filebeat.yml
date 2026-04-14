@@ -1,0 +1,107 @@
+# Filebeat Configuration for Banking Reconciliation Platform
+# Step 228: Configure Log Forwarding
+
+filebeat.inputs:
+  # Auth Service logs
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/banking/auth-service/*.log
+      - /var/log/banking/auth-service/**/*.log
+    fields:
+      service: auth-service
+      tier: saas-platform
+    fields_under_root: true
+    json.keys_under_root: true
+    json.overwrite_keys: true
+    json.add_error_key: true
+    multiline.pattern: '^\d{4}-\d{2}-\d{2}'
+    multiline.negate: true
+    multiline.match: after
+
+  # Match Orchestrator logs
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/banking/match-orchestrator/*.log
+    fields:
+      service: match-orchestrator
+      tier: core-business
+    fields_under_root: true
+    json.keys_under_root: true
+    json.overwrite_keys: true
+    json.add_error_key: true
+
+  # Data Prep Service logs
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/banking/data-prep-service/*.log
+    fields:
+      service: data-prep-service
+      tier: data-processing
+    fields_under_root: true
+    json.keys_under_root: true
+    json.overwrite_keys: true
+    json.add_error_key: true
+
+  # Matching technique services (MT-01 to MT-16)
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/banking/matching-services/*.log
+    fields:
+      tier: matching-engines
+    fields_under_root: true
+    json.keys_under_root: true
+    json.overwrite_keys: true
+    json.add_error_key: true
+
+  # PostgreSQL logs
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/postgresql/*.log
+    fields:
+      service: postgres
+      tier: database
+    fields_under_root: true
+
+  # Docker container logs (all banking containers)
+  - type: container
+    enabled: true
+    paths:
+      - /var/lib/docker/containers/banking-*/*.log
+    processors:
+      - add_docker_metadata:
+          host: "unix:///var/run/docker.sock"
+
+# Add common metadata to all events
+processors:
+  - add_host_metadata:
+      when.not.contains.tags: forwarded
+  - add_cloud_metadata: ~
+  - add_docker_metadata: ~
+  - add_fields:
+      target: ''
+      fields:
+        environment: ${NODE_ENV:development}
+        platform: banking-reconciliation
+
+# Output to Logstash (Step 227)
+output.logstash:
+  hosts: ["logstash:5044"]
+  loadbalance: true
+  bulk_max_size: 1024
+
+# Filebeat registry
+filebeat.registry.path: /var/lib/filebeat/registry
+
+# Logging
+logging.level: warning
+logging.to_files: true
+logging.files:
+  path: /var/log/filebeat
+  name: filebeat
+  keepfiles: 7
+  permissions: 0640
