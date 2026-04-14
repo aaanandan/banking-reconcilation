@@ -1,0 +1,74 @@
+# Prometheus Configuration for Banking Reconciliation System
+# Step 221: Deploy Prometheus (Local Docker Version)
+
+global:
+  scrape_interval: 15s      # Scrape metrics every 15 seconds
+  evaluation_interval: 15s  # Evaluate rules every 15 seconds
+  external_labels:
+    cluster: 'banking-reconciliation-local'
+    environment: 'development'
+
+# Alertmanager configuration (Step 225)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+# Alert rule files (Step 225)
+rule_files:
+  - 'alerts/*.yml'
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+
+  # Auth Service - Main SaaS Platform
+  - job_name: 'auth-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:3001']
+        labels:
+          service: 'auth-service'
+          tier: 'saas-platform'
+          component: 'authentication'
+    scrape_interval: 10s
+
+  # Match Orchestrator
+  - job_name: 'match-orchestrator'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:3002']
+        labels:
+          service: 'match-orchestrator'
+          tier: 'core-business'
+          component: 'reconciliation'
+
+  # Data Prep Service
+  - job_name: 'data-prep-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:3003']
+        labels:
+          service: 'data-prep-service'
+          tier: 'data-processing'
+          component: 'etl'
+
+  # Matching Technique Services (MT-01 to MT-05)
+  - job_name: 'matching-services'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets:
+          - 'host.docker.internal:3010'
+          - 'host.docker.internal:3011'
+          - 'host.docker.internal:3012'
+          - 'host.docker.internal:3013'
+          - 'host.docker.internal:3014'
+        labels:
+          tier: 'matching-engines'
+          component: 'matching-techniques'
+    scrape_interval: 30s
