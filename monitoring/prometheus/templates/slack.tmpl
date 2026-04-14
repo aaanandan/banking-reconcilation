@@ -1,0 +1,46 @@
+{{/* Slack notification templates for Banking Reconciliation Platform */}}
+{{/* Step 226: Configure Slack Notifications */}}
+
+{{/* Alert title with status indicator */}}
+{{ define "slack.banking.title" -}}
+{{ if eq .Status "firing" -}}
+  {{ if eq .CommonLabels.severity "critical" }}:rotating_light:{{ else if eq .CommonLabels.severity "warning" }}:warning:{{ else }}:information_source:{{ end }}
+{{- else -}}
+  :white_check_mark:
+{{- end }}
+{{ .CommonLabels.alertname }} — {{ .Status | toUpper }}
+{{- end }}
+
+{{/* Alert color based on severity and status */}}
+{{ define "slack.banking.color" -}}
+{{ if eq .Status "resolved" -}}
+  good
+{{- else if eq .CommonLabels.severity "critical" -}}
+  danger
+{{- else if eq .CommonLabels.severity "warning" -}}
+  warning
+{{- else -}}
+  #439FE0
+{{- end }}
+{{- end }}
+
+{{/* Alert body with all relevant details */}}
+{{ define "slack.banking.text" -}}
+{{ range .Alerts -}}
+*Summary:* {{ .Annotations.summary }}
+*Description:* {{ .Annotations.description }}
+*Severity:* `{{ .Labels.severity }}`
+*Category:* `{{ .Labels.category }}`
+{{ if .Annotations.runbook -}}
+*Runbook:* {{ .Annotations.runbook }}
+{{ end -}}
+{{ if gt (len .Labels.service) 0 -}}
+*Service:* {{ .Labels.service }}
+{{ end -}}
+*Started:* {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+{{ if eq $.Status "resolved" -}}
+*Resolved:* {{ .EndsAt.Format "2006-01-02 15:04:05 UTC" }}
+{{ end -}}
+---
+{{ end -}}
+{{- end }}

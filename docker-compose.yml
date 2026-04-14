@@ -52,6 +52,7 @@ services:
 
   # Alertmanager - Alert Management
   # Step 225: Alertmanager for routing and managing alerts
+  # Step 226: Slack notifications configured
   alertmanager:
     image: prom/alertmanager:v0.27.0
     container_name: banking-alertmanager
@@ -61,8 +62,12 @@ services:
       - '--web.external-url=http://localhost:9093'
     ports:
       - "9093:9093"
+    environment:
+      # Set your Slack webhook URL here or in .env file
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK}
     volumes:
       - ./monitoring/prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./monitoring/prometheus/templates:/etc/alertmanager/templates:ro
       - alertmanager_data:/alertmanager
     networks:
       - banking-network
