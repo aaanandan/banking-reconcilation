@@ -1,7 +1,12 @@
 // Step 222: Auth Service with Prometheus metrics endpoint
 // Step 228: Structured JSON logging for ELK forwarding
 // Step 230: Sentry error tracking
+// Step 231: Distributed tracing (OpenTelemetry + Jaeger)
 // Banking Reconciliation Platform
+
+// Tracing must be initialised before all other requires
+const { initTracing, tracingMiddleware } = require('../../monitoring/tracing/tracer');
+initTracing();
 
 const express = require('express');
 const logger = require('./logger/logger');
@@ -27,6 +32,8 @@ const PORT = process.env.PORT || 3001;
 
 // Sentry request handler — must be first middleware
 app.use(sentryRequestHandler());
+// Distributed tracing middleware — adds X-Trace-Id / X-Span-Id headers (Step 231)
+app.use(tracingMiddleware());
 app.use(express.json());
 
 // Structured JSON request logging (Step 228 — feeds Filebeat → Logstash → ES)

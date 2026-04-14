@@ -80,6 +80,28 @@ services:
     depends_on:
       - prometheus
 
+  # Jaeger - Distributed Tracing
+  # Step 231: Implement distributed tracing
+  jaeger:
+    image: jaegertracing/all-in-one:1.56
+    container_name: banking-jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - SPAN_STORAGE_TYPE=memory
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "14268:14268"   # HTTP collector
+      - "4317:4317"     # OTLP gRPC
+      - "4318:4318"     # OTLP HTTP
+    networks:
+      - banking-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:16686/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # ── ELK Stack ──────────────────────────────────────────────────────────────
   # Step 227: Deploy ELK Stack for centralised log management
 
