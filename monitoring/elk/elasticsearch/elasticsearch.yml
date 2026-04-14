@@ -1,0 +1,21 @@
+# Elasticsearch Configuration for Banking Reconciliation Platform
+# Step 227: Deploy ELK Stack
+
+cluster.name: banking-recon-logs
+node.name: banking-es-node-1
+
+network.host: 0.0.0.0
+http.port: 9200
+
+discovery.type: single-node
+
+# Security (disabled for local dev — enable in production)
+xpack.security.enabled: false
+xpack.security.enrollment.enabled: false
+
+# Index settings
+indices.memory.index_buffer_size: 20%
+indices.queries.cache.size: 10%
+
+# Log level
+logger.level: WARN

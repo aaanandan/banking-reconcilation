@@ -1,0 +1,13 @@
+# Logstash Configuration for Banking Reconciliation Platform
+# Step 227: Deploy ELK Stack
+
+http.host: "0.0.0.0"
+http.port: 9600
+
+# Pipeline settings
+pipeline.workers: 2
+pipeline.batch.size: 125
+pipeline.batch.delay: 50
+
+# Log level
+log.level: warn
