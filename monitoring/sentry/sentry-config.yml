@@ -1,0 +1,75 @@
+# Sentry Configuration for Banking Reconciliation Platform
+# Step 230: Setup Sentry for Error Tracking
+#
+# Setup instructions:
+# 1. Create a Sentry account at https://sentry.io
+# 2. Create a new project (Node.js)
+# 3. Copy the DSN and set SENTRY_DSN environment variable
+# 4. Add SENTRY_DSN to .env file
+
+sentry:
+  # Project settings
+  project: banking-reconciliation
+  organization: your-org-slug
+
+  # Environment-specific DSN (set via environment variables)
+  environments:
+    development:
+      dsn: ${SENTRY_DSN}
+      traces_sample_rate: 1.0
+      profiles_sample_rate: 1.0
+      send_default_pii: false
+
+    staging:
+      dsn: ${SENTRY_DSN_STAGING}
+      traces_sample_rate: 0.5
+      profiles_sample_rate: 0.5
+      send_default_pii: false
+
+    production:
+      dsn: ${SENTRY_DSN_PRODUCTION}
+      traces_sample_rate: 0.1
+      profiles_sample_rate: 0.1
+      send_default_pii: false
+
+  # Alert rules in Sentry UI (configure after setup)
+  alert_rules:
+    - name: "High Error Rate"
+      conditions:
+        - type: event_frequency
+          value: 100
+          interval: 1h
+      actions:
+        - type: slack
+          channel: "#alerts-critical"
+
+    - name: "New Issue Detected"
+      conditions:
+        - type: first_seen_event
+      actions:
+        - type: slack
+          channel: "#alerts-warning"
+
+    - name: "Critical Exception"
+      conditions:
+        - type: event_attribute
+          attribute: level
+          value: fatal
+      actions:
+        - type: slack
+          channel: "#alerts-critical"
+        - type: email
+          target: oncall@banking-reconciliation.com
+
+  # Ignored errors (noise reduction)
+  ignored_errors:
+    - "ECONNRESET"
+    - "ETIMEDOUT"
+    - "NetworkError"
+    - "AbortError"
+
+  # Release tracking
+  releases:
+    # Auto-create releases in CI/CD (Step 210 GitHub Actions)
+    auto_create: true
+    version_format: "${APP_VERSION}-${GIT_SHA}"
