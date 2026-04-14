@@ -1,0 +1,16 @@
+# Step 223: Grafana Dashboard Auto-Provisioning
+# Automatically loads all dashboard JSON files from the dashboards directory
+
+apiVersion: 1
+
+providers:
+  - name: 'Banking Reconciliation Dashboards'
+    orgId: 1
+    folder: 'Banking Reconciliation'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false
