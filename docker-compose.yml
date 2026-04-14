@@ -50,6 +50,31 @@ services:
       # Allow Prometheus to scrape services running on host machine
       - "host.docker.internal:host-gateway"
 
+  # Alertmanager - Alert Management
+  # Step 225: Alertmanager for routing and managing alerts
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: banking-alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    networks:
+      - banking-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9093/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      - prometheus
+
   # Grafana - Metrics Visualization
   # Step 223: Grafana deployed for dashboard visualization
   grafana:
@@ -87,6 +112,8 @@ volumes:
   prometheus_data:
     driver: local
   grafana_data:
+    driver: local
+  alertmanager_data:
     driver: local
 
 networks:

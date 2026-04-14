@@ -1,0 +1,295 @@
+# Prometheus Alert Rules for Banking Reconciliation Platform
+# Step 225: Setup Alert Rules
+# Reference: DOCUMENTS_03_TO_12_COMPLETE_SUMMARY.md - Document 6
+
+groups:
+  # Application Health Alerts
+  - name: application_health
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          (sum(rate(http_request_duration_seconds_count{status_code=~"5.."}[5m]))
+          / sum(rate(http_request_duration_seconds_count[5m]))) * 100 > 5
+        for: 5m
+        labels:
+          severity: critical
+          category: application
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} for {{ $labels.app }}"
+          runbook: "Check application logs and recent deployments"
+
+      - alert: SlowResponseTime
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le, app)
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "Slow response time detected"
+          description: "P95 response time is {{ $value }}s for {{ $labels.app }}"
+          runbook: "Check database performance and API dependencies"
+
+      - alert: ServiceDown
+        expr: up{job=~"auth-service|match-orchestrator|data-prep-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "Service is down"
+          description: "{{ $labels.job }} has been down for more than 1 minute"
+          runbook: "Check service logs and restart if necessary"
+
+      - alert: HighRequestRate
+        expr: sum(rate(http_request_duration_seconds_count[1m])) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "High request rate detected"
+          description: "Request rate is {{ $value }} req/s"
+          runbook: "Monitor for potential DDoS or traffic spike"
+
+  # Authentication & Security Alerts
+  - name: authentication_security
+    interval: 30s
+    rules:
+      - alert: HighLoginFailureRate
+        expr: |
+          (sum(rate(auth_login_failure_total[5m]))
+          / sum(rate(auth_login_attempts_total[5m]))) * 100 > 20
+        for: 5m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "High login failure rate detected"
+          description: "Login failure rate is {{ $value | humanizePercentage }}"
+          runbook: "Investigate for potential brute-force attack"
+
+      - alert: SuspiciousLoginActivity
+        expr: sum(rate(auth_login_failure_total[5m])) > 10
+        for: 2m
+        labels:
+          severity: critical
+          category: security
+        annotations:
+          summary: "Suspicious login activity detected"
+          description: "{{ $value }} failed login attempts per second"
+          runbook: "Check for brute-force attacks and consider blocking IPs"
+
+      - alert: Low2FAAdoption
+        expr: |
+          (security_2fa_enabled_total / tenants_active_total) * 100 < 50
+        for: 1h
+        labels:
+          severity: info
+          category: security
+        annotations:
+          summary: "Low 2FA adoption rate"
+          description: "Only {{ $value | humanizePercentage }} of users have 2FA enabled"
+          runbook: "Consider campaign to encourage 2FA adoption"
+
+      - alert: HighPasswordResetRate
+        expr: rate(security_password_reset_total[5m]) > 5
+        for: 10m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "High password reset rate"
+          description: "{{ $value }} password resets per second"
+          runbook: "Monitor for potential account compromise"
+
+  # Business Metrics Alerts
+  - name: business_metrics
+    interval: 60s
+    rules:
+      - alert: HighTenantSuspensionRate
+        expr: increase(tenants_suspended_total[1h]) > 5
+        for: 30m
+        labels:
+          severity: warning
+          category: business
+        annotations:
+          summary: "High tenant suspension rate"
+          description: "{{ $value }} tenants suspended in the last hour"
+          runbook: "Investigate suspension reasons and contact affected tenants"
+
+      - alert: SubscriptionChurnSpike
+        expr: increase(subscriptions_cancelled_total[1h]) > 10
+        for: 30m
+        labels:
+          severity: warning
+          category: business
+        annotations:
+          summary: "Subscription churn spike detected"
+          description: "{{ $value }} subscriptions cancelled in the last hour"
+          runbook: "Investigate cancellation reasons and retention strategies"
+
+      - alert: NoNewTenants
+        expr: increase(tenants_created_total[24h]) == 0
+        for: 6h
+        labels:
+          severity: info
+          category: business
+        annotations:
+          summary: "No new tenant signups"
+          description: "No new tenants in the last 24 hours"
+          runbook: "Check signup flow and marketing campaigns"
+
+      - alert: LowActiveSubscriptions
+        expr: sum(subscriptions_active_total) < 10
+        for: 1h
+        labels:
+          severity: warning
+          category: business
+        annotations:
+          summary: "Low active subscription count"
+          description: "Only {{ $value }} active subscriptions"
+          runbook: "Review subscription health and conversion funnel"
+
+  # Infrastructure Alerts
+  - name: infrastructure
+    interval: 30s
+    rules:
+      - alert: HighMemoryUsage
+        expr: |
+          (process_resident_memory_bytes{app="auth-service"}
+          / (1024 * 1024 * 1024)) > 2
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "High memory usage"
+          description: "{{ $labels.app }} is using {{ $value | humanize }}GB of memory"
+          runbook: "Check for memory leaks and consider scaling"
+
+      - alert: HighCPUUsage
+        expr: rate(process_cpu_user_seconds_total{app="auth-service"}[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "High CPU usage"
+          description: "{{ $labels.app }} CPU usage is {{ $value | humanizePercentage }}"
+          runbook: "Check for inefficient queries or infinite loops"
+
+      - alert: HighEventLoopLag
+        expr: nodejs_eventloop_lag_seconds{app="auth-service"} > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "High Node.js event loop lag"
+          description: "Event loop lag is {{ $value }}s for {{ $labels.app }}"
+          runbook: "Check for blocking operations in event loop"
+
+  # Database Alerts
+  - name: database
+    interval: 30s
+    rules:
+      - alert: HighDatabaseConnections
+        expr: process_open_fds{job="postgres"} > 80
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "High database connection count"
+          description: "{{ $value }} database connections active"
+          runbook: "Check for connection leaks and scale database if needed"
+
+      - alert: SlowDatabaseQueries
+        expr: |
+          histogram_quantile(0.95,
+            rate(http_request_duration_seconds_bucket[5m])
+          ) > 5
+        for: 10m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "Slow database queries detected"
+          description: "P95 query time is {{ $value }}s"
+          runbook: "Analyze slow query log and optimize indexes"
+
+  # Webhook & Integration Alerts
+  - name: webhooks
+    interval: 60s
+    rules:
+      - alert: HighWebhookFailureRate
+        expr: |
+          (sum(rate(webhooks_failed_total[5m]))
+          / sum(rate(webhooks_delivered_total[5m]) + rate(webhooks_failed_total[5m]))) * 100 > 10
+        for: 10m
+        labels:
+          severity: warning
+          category: integration
+        annotations:
+          summary: "High webhook failure rate"
+          description: "{{ $value | humanizePercentage }} of webhooks failing"
+          runbook: "Check webhook endpoint health and retry logic"
+
+      - alert: WebhookDeliveryStalled
+        expr: rate(webhooks_delivered_total[5m]) == 0 and rate(webhooks_failed_total[5m]) == 0
+        for: 30m
+        labels:
+          severity: warning
+          category: integration
+        annotations:
+          summary: "Webhook delivery appears stalled"
+          description: "No webhook deliveries in 30 minutes"
+          runbook: "Check webhook queue and processing service"
+
+  # Email Alerts
+  - name: email
+    interval: 60s
+    rules:
+      - alert: HighEmailFailureRate
+        expr: |
+          (sum(rate(emails_failed_total[5m]))
+          / sum(rate(emails_sent_total[5m]) + rate(emails_failed_total[5m]))) * 100 > 10
+        for: 10m
+        labels:
+          severity: warning
+          category: integration
+        annotations:
+          summary: "High email failure rate"
+          description: "{{ $value | humanizePercentage }} of emails failing"
+          runbook: "Check email service credentials and quotas"
+
+      - alert: NoEmailsSent
+        expr: rate(emails_sent_total[5m]) == 0 and rate(emails_failed_total[5m]) == 0
+        for: 1h
+        labels:
+          severity: info
+          category: integration
+        annotations:
+          summary: "No emails being sent"
+          description: "Email service may be down or idle"
+          runbook: "Verify email service is running"
+
+  # API Key Alerts
+  - name: api_keys
+    interval: 60s
+    rules:
+      - alert: SuspiciousAPIKeyActivity
+        expr: rate(api_key_requests_total[5m]) > 100
+        for: 5m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "Suspicious API key activity"
+          description: "{{ $value }} API requests per second from {{ $labels.api_key_id }}"
+          runbook: "Investigate API key usage and consider rate limiting"
