@@ -52,6 +52,10 @@ app.use((req, res, next) => {
   next();
 });
 
+// Step 262: Swagger UI — serve docs/api/ statically
+const path = require('path');
+app.use('/api-docs', express.static(path.join(__dirname, '../../../docs/api')));
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'auth-service', timestamp: new Date().toISOString() });
