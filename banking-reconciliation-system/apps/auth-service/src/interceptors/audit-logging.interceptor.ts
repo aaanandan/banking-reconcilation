@@ -123,7 +123,7 @@ export class AuditLoggingInterceptor implements NestInterceptor {
         responseTime: params.responseTime,
         ipAddress: params.ipAddress,
         userAgent: params.userAgent,
-        sessionId: params.sessionId,
+        sessionId: params.sessionId ?? undefined,
         isSuccessful: params.isSuccessful,
         failureReason: params.failureReason,
         metadata: params.metadata,

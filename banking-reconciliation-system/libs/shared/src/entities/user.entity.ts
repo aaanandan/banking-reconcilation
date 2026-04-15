@@ -42,11 +42,20 @@ export class User {
   @Column()
   lastName: string;
 
+  @Column({ nullable: true })
+  name: string; // Full name (computed or set directly)
+
   @Column({ default: 'user' })
   role: string;  // 'admin' | 'user'
 
   @Column({ default: true })
   isActive: boolean;
+
+  @Column({ default: false })
+  isAdmin: boolean; // Quick admin check flag
+
+  @Column({ default: false })
+  isSuspended: boolean; // Account suspension flag
 
   // ═══════════════════════════════════════════════════════════
   // OAUTH / SOCIAL LOGIN
@@ -102,7 +111,7 @@ export class User {
   // ═══════════════════════════════════════════════════════════
   // PASSWORD RESET
   // ═══════════════════════════════════════════════════════════
-  @Column({ nullable: true })
+  @Column({ nullable: true, type: 'varchar' })
   resetPasswordToken: string | null;
 
   @Column({ nullable: true, type: 'timestamp' })
@@ -114,6 +123,10 @@ export class User {
 
   @OneToMany(() => UserFeedback, feedback => feedback.user)
   feedbacks: UserFeedback[];
+
+  // Tracking
+  @Column({ nullable: true, type: 'timestamp' })
+  lastLoginAt: Date | undefined;
 
   @CreateDateColumn()
   createdAt: Date;

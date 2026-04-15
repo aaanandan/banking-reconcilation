@@ -277,7 +277,7 @@ export class UserSession {
    */
   revokeTrust(): void {
     this.isTrustedDevice = false;
-    this.trustedAt = null;
+    this.trustedAt = undefined;
   }
 
   /**

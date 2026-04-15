@@ -158,21 +158,21 @@ export class FeatureFlag {
         return this.evaluatePercentageRollout(context.userId || context.tenantId || '');
 
       case TargetingStrategyEnum.USER_WHITELIST:
-        return (
+        return !!(
           context.userId &&
           this.whitelistedUsers &&
           this.whitelistedUsers.includes(context.userId)
         );
 
       case TargetingStrategyEnum.TENANT_WHITELIST:
-        return (
+        return !!(
           context.tenantId &&
           this.whitelistedTenants &&
           this.whitelistedTenants.includes(context.tenantId)
         );
 
       case TargetingStrategyEnum.PLAN_BASED:
-        return (
+        return !!(
           context.plan && this.allowedPlans && this.allowedPlans.includes(context.plan)
         );
 

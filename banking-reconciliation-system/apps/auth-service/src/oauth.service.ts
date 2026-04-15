@@ -70,6 +70,10 @@ export class OAuthService {
       });
     }
 
+    if (!user) {
+      throw new Error('User not found after OAuth authentication');
+    }
+
     // Email is verified by OAuth provider
     if (!user.emailVerified) {
       await this.userRepository.update(user.id, { emailVerified: true });
@@ -181,7 +185,7 @@ export class OAuthService {
       isActive: true,
       emailVerified: true, // OAuth providers verify email
       authProvider: profile.provider,
-      passwordHash: null, // No password for OAuth users
+      passwordHash: undefined, // No password for OAuth users
     };
 
     // Set provider ID
@@ -197,10 +201,16 @@ export class OAuthService {
     this.logger.log(`Created new user from ${profile.provider} OAuth: ${user.id}`);
 
     // Reload with tenant relation
-    return this.userRepository.findOne({
+    const createdUser = await this.userRepository.findOne({
       where: { id: user.id },
       relations: ['tenant'],
     });
+
+    if (!createdUser) {
+      throw new Error('Failed to retrieve created user');
+    }
+
+    return createdUser;
   }
 
   /**
@@ -237,8 +247,8 @@ export class OAuthService {
 
     const updateData: Partial<User> =
       provider === 'google'
-        ? { googleId: null }
-        : { microsoftId: null };
+        ? { googleId: undefined }
+        : { microsoftId: undefined };
 
     // Reset auth provider to local if no other OAuth linked
     if (

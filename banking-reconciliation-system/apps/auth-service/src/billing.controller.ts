@@ -8,11 +8,11 @@ import {
   Body,
   Param,
   Headers,
-  RawBodyRequest,
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { Request } from 'express';
+import type { RawBodyRequest } from '@nestjs/common';
+import type { Request } from 'express';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { StripeService } from './stripe.service';
 import {
