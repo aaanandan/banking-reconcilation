@@ -1,4 +1,4 @@
-import { ColumnMapping } from '../services/dataPrepService';
+import type { ColumnMapping } from '../services/dataPrepService';
 
 /**
  * Mapping History Utility
