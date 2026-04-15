@@ -202,14 +202,36 @@ export class AdminDashboardService {
   /**
    * Get user list with filtering
    */
-  async getUsers(page: number = 1, pageSize: number = 50): Promise<UserManagementDto[]> {
-    const users = await this.userRepository.find({
+  async getUsers(filters: {
+    query?: string;
+    tenantId?: string;
+    isActive?: boolean;
+    page?: number;
+    pageSize?: number;
+  }): Promise<{ users: UserManagementDto[]; total: number; page: number; totalPages: number }> {
+    const page = filters.page || 1;
+    const pageSize = filters.pageSize || 50;
+
+    // Build query conditions
+    const where: any = {};
+    if (filters.tenantId) where.tenantId = filters.tenantId;
+    if (filters.isActive !== undefined) where.isActive = filters.isActive;
+
+    const [users, total] = await this.userRepository.findAndCount({
+      where,
       take: pageSize,
       skip: (page - 1) * pageSize,
       order: { createdAt: 'DESC' },
     });
 
-    return Promise.all(users.map(user => this.mapUserToManagementDto(user)));
+    const userDtos = await Promise.all(users.map(user => this.mapUserToManagementDto(user)));
+
+    return {
+      users: userDtos,
+      total,
+      page,
+      totalPages: Math.ceil(total / pageSize),
+    };
   }
 
   /**
@@ -243,7 +265,7 @@ export class AdminDashboardService {
         if (!newPlan) {
           throw new BadRequestException('Plan is required for upgrade action');
         }
-        await this.tenantService.updateTenant(dto.tenantId, { plan: newPlan });
+        await this.tenantService.updatePlan(dto.tenantId, { plan: newPlan });
         break;
 
       case AdminActionEnum.RESET_QUOTA:
@@ -396,16 +418,30 @@ export class AdminDashboardService {
   /**
    * Get admin audit logs
    */
-  async getAdminAuditLogs(limit: number = 100): Promise<AdminAuditLogDto[]> {
-    const logs = await this.auditLogRepository.find({
-      where: {
-        action: Not(IsNull()),
-      },
+  async getAdminAuditLogs(filters: {
+    adminId?: string;
+    targetType?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    pageSize?: number;
+  }): Promise<{ logs: AdminAuditLogDto[]; total: number; page: number; totalPages: number }> {
+    const page = filters.page || 1;
+    const pageSize = filters.pageSize || 50;
+
+    const where: any = {
+      action: Not(IsNull()),
+    };
+    if (filters.adminId) where.userId = filters.adminId;
+
+    const [logs, total] = await this.auditLogRepository.findAndCount({
+      where,
       order: { timestamp: 'DESC' },
-      take: limit,
+      take: pageSize,
+      skip: (page - 1) * pageSize,
     });
 
-    return logs.map(log => ({
+    const logDtos = logs.map(log => ({
       id: log.id,
       adminId: log.userId || 'system',
       adminEmail: log.userEmail || 'system',
@@ -417,12 +453,23 @@ export class AdminDashboardService {
       ipAddress: log.ipAddress || '',
       timestamp: log.timestamp,
     }));
+
+    return {
+      logs: logDtos,
+      total,
+      page,
+      totalPages: Math.ceil(total / pageSize),
+    };
   }
 
   /**
    * Get system alerts
    */
-  async getAlerts(): Promise<AdminAlertDto[]> {
+  async getAlerts(filters?: {
+    type?: 'critical' | 'warning' | 'info';
+    category?: 'system' | 'security' | 'billing' | 'usage';
+    unresolvedOnly?: boolean;
+  }): Promise<AdminAlertDto[]> {
     const alerts: AdminAlertDto[] = [];
 
     // Check for tenants nearing quota limits
@@ -490,7 +537,7 @@ export class AdminDashboardService {
       tenantName: '', // Would join with tenant
       role: user.role,
       isActive: user.isActive,
-      isEmailVerified: user.isEmailVerified,
+      isEmailVerified: user.emailVerified,
       twoFactorEnabled: user.twoFactorEnabled,
 
       createdAt: user.createdAt,
@@ -614,5 +661,51 @@ export class AdminDashboardService {
       metadata: { reason },
       timestamp: new Date(),
     });
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // STUB METHODS (TODO: Implement in future iterations)
+  // These methods are called by admin.controller.ts but were not
+  // fully implemented in Steps 217-220
+  // ═══════════════════════════════════════════════════════════
+
+  async getTenantDetails(tenantId: string): Promise<any> {
+    throw new Error('getTenantDetails: Not yet implemented');
+  }
+
+  async getUserDetails(userId: string): Promise<any> {
+    throw new Error('getUserDetails: Not yet implemented');
+  }
+
+  async getSystemHealth(): Promise<any> {
+    throw new Error('getSystemHealth: Not yet implemented');
+  }
+
+  async resolveAlert(alertId: string, adminId: string): Promise<void> {
+    throw new Error('resolveAlert: Not yet implemented');
+  }
+
+  async getSettings(): Promise<any> {
+    throw new Error('getSettings: Not yet implemented');
+  }
+
+  async updateSettings(updateDto: any, adminId: string): Promise<any> {
+    throw new Error('updateSettings: Not yet implemented');
+  }
+
+  async exportData(exportDto: any, adminId: string): Promise<any> {
+    throw new Error('exportData: Not yet implemented');
+  }
+
+  async getFeatureFlagStats(): Promise<any> {
+    throw new Error('getFeatureFlagStats: Not yet implemented');
+  }
+
+  async getTenantActivity(tenantId: string, limit: number): Promise<any> {
+    throw new Error('getTenantActivity: Not yet implemented');
+  }
+
+  async generateImpersonationToken(tenantId: string, userId: string, reason: string, adminId: string): Promise<any> {
+    throw new Error('generateImpersonationToken: Not yet implemented');
   }
 }

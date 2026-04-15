@@ -1,0 +1,602 @@
+version: '3.8'
+
+services:
+  # ===========================================
+  # Infrastructure Services
+  # ===========================================
+
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: banking-recon-postgres-test
+    environment:
+      POSTGRES_DB: banking_recon_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: test_password_123
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - banking-recon-test-network
+
+  redis-test:
+    image: redis:7-alpine
+    container_name: banking-recon-redis-test
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_test_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - banking-recon-test-network
+
+  minio-test:
+    image: minio/minio:latest
+    container_name: banking-recon-minio-test
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9010:9000"
+      - "9011:9001"
+    volumes:
+      - minio_test_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - banking-recon-test-network
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: banking-recon-mailhog-test
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks:
+      - banking-recon-test-network
+
+  # ===========================================
+  # Core Backend Services
+  # ===========================================
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        SERVICE_NAME: auth-service
+    container_name: banking-recon-auth-service-test
+    env_file:
+      - .env.test
+    environment:
+      AUTH_SERVICE_PORT: 3001
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    networks:
+      - banking-recon-test-network
+    volumes:
+      - ./apps/auth-service:/app/apps/auth-service
+      - ./libs:/app/libs
+      - /app/node_modules
+    command: npm run start:dev -- auth-service
+
+  data-prep-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        SERVICE_NAME: data-prep-service
+    container_name: banking-recon-data-prep-test
+    env_file:
+      - .env.test
+    environment:
+      DATA_PREP_SERVICE_PORT: 3002
+    ports:
+      - "3002:3002"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      minio-test:
+        condition: service_healthy
+    networks:
+      - banking-recon-test-network
+    volumes:
+      - ./apps/data-prep-service:/app/apps/data-prep-service
+      - ./libs:/app/libs
+      - /app/node_modules
+
+  state-manager-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        SERVICE_NAME: state-manager-service
+    container_name: banking-recon-state-manager-test
+    env_file:
+      - .env.test
+    environment:
+      STATE_MANAGER_SERVICE_PORT: 3003
+    ports:
+      - "3003:3003"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    networks:
+      - banking-recon-test-network
+    volumes:
+      - ./apps/state-manager-service:/app/apps/state-manager-service
+      - ./libs:/app/libs
+      - /app/node_modules
+
+  match-orchestrator:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        SERVICE_NAME: match-orchestrator
+    container_name: banking-recon-match-orchestrator-test
+    env_file:
+      - .env.test
+    environment:
+      MATCH_ORCHESTRATOR_PORT: 3004
+    ports:
+      - "3004:3004"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    networks:
+      - banking-recon-test-network
+    volumes:
+      - ./apps/match-orchestrator:/app/apps/match-orchestrator
+      - ./libs:/app/libs
+      - /app/node_modules
+
+  learning-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        SERVICE_NAME: learning-service
+    container_name: banking-recon-learning-service-test
+    env_file:
+      - .env.test
+    environment:
+      LEARNING_SERVICE_PORT: 3005
+    ports:
+      - "3005:3005"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    networks:
+      - banking-recon-test-network
+    volumes:
+      - ./apps/learning-service:/app/apps/learning-service
+      - ./libs:/app/libs
+      - /app/node_modules
+
+  question-manager-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        SERVICE_NAME: question-manager-service
+    container_name: banking-recon-question-manager-test
+    env_file:
+      - .env.test
+    environment:
+      QUESTION_MANAGER_PORT: 3006
+    ports:
+      - "3006:3006"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    networks:
+      - banking-recon-test-network
+    volumes:
+      - ./apps/question-manager-service:/app/apps/question-manager-service
+      - ./libs:/app/libs
+      - /app/node_modules
+
+  # ===========================================
+  # Match Type Services (MT-01 through MT-16)
+  # ===========================================
+
+  mt-01-exact-match:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        SERVICE_NAME: mt-01-exact-match
+    container_name: banking-recon-mt-01-test
+    env_file:
+      - .env.test
+    environment:
+      MT_01_PORT: 3011
+    ports:
+      - "3011:3011"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    networks:
+      - banking-recon-test-network
+    volumes:
+      - ./apps/mt-01-exact-match:/app/apps/mt-01-exact-match
+      - ./libs:/app/libs
+      - /app/node_modules
+
+  mt-02-near-exact:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        SERVICE_NAME: mt-02-near-exact
+    container_name: banking-recon-mt-02-test
+    env_file:
+      - .env.test
+    environment:
+      MT_02_PORT: 3012
+    ports:
+      - "3012:3012"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    networks:
+      - banking-recon-test-network
+    volumes:
+      - ./apps/mt-02-near-exact:/app/apps/mt-02-near-exact
+      - ./libs:/app/libs
+      - /app/node_modules
+
+  mt-03-bank-fees:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        SERVICE_NAME: mt-03-bank-fees
+    container_name: banking-recon-mt-03-test
+    env_file:
+      - .env.test
+    environment:
+      MT_03_PORT: 3013
+    ports:
+      - "3013:3013"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    networks:
+      - banking-recon-test-network
+    volumes:
+      - ./apps/mt-03-bank-fees:/app/apps/mt-03-bank-fees
+      - ./libs:/app/libs
+      - /app/node_modules
+
+  mt-04-interest:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        SERVICE_NAME: mt-04-interest
+    container_name: banking-recon-mt-04-test
+    env_file:
+      - .env.test
+    environment:
+      MT_04_PORT: 3014
+    ports:
+      - "3014:3014"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    networks:
+      - banking-recon-test-network
+    volumes:
+      - ./apps/mt-04-interest:/app/apps/mt-04-interest
+      - ./libs:/app/libs
+      - /app/node_modules
+
+  mt-05-split-payments:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        SERVICE_NAME: mt-05-split-payments
+    container_name: banking-recon-mt-05-test
+    env_file:
+      - .env.test
+    environment:
+      MT_05_PORT: 3015
+    ports:
+      - "3015:3015"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    networks:
+      - banking-recon-test-network
+    volumes:
+      - ./apps/mt-05-split-payments:/app/apps/mt-05-split-payments
+      - ./libs:/app/libs
+      - /app/node_modules
+
+  mt-06-consolidated-deposits:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        SERVICE_NAME: mt-06-consolidated-deposits
+    container_name: banking-recon-mt-06-test
+    env_file:
+      - .env.test
+    environment:
+      MT_06_PORT: 3016
+    ports:
+      - "3016:3016"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    networks:
+      - banking-recon-test-network
+    volumes:
+      - ./apps/mt-06-consolidated-deposits:/app/apps/mt-06-consolidated-deposits
+      - ./libs:/app/libs
+      - /app/node_modules
+
+  mt-07-duplicate-postings:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        SERVICE_NAME: mt-07-duplicate-postings
+    container_name: banking-recon-mt-07-test
+    env_file:
+      - .env.test
+    environment:
+      MT_07_PORT: 3017
+    ports:
+      - "3017:3017"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    networks:
+      - banking-recon-test-network
+    volumes:
+      - ./apps/mt-07-duplicate-postings:/app/apps/mt-07-duplicate-postings
+      - ./libs:/app/libs
+      - /app/node_modules
+
+  mt-08-reversals:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        SERVICE_NAME: mt-08-reversals
+    container_name: banking-recon-mt-08-test
+    env_file:
+      - .env.test
+    environment:
+      MT_08_PORT: 3018
+    ports:
+      - "3018:3018"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    networks:
+      - banking-recon-test-network
+    volumes:
+      - ./apps/mt-08-reversals:/app/apps/mt-08-reversals
+      - ./libs:/app/libs
+      - /app/node_modules
+
+  mt-09-timing-differences:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        SERVICE_NAME: mt-09-timing-differences
+    container_name: banking-recon-mt-09-test
+    env_file:
+      - .env.test
+    environment:
+      MT_09_PORT: 3019
+    ports:
+      - "3019:3019"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    networks:
+      - banking-recon-test-network
+    volumes:
+      - ./apps/mt-09-timing-differences:/app/apps/mt-09-timing-differences
+      - ./libs:/app/libs
+      - /app/node_modules
+
+  mt-10-currency:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        SERVICE_NAME: mt-10-currency
+    container_name: banking-recon-mt-10-test
+    env_file:
+      - .env.test
+    environment:
+      MT_10_PORT: 3020
+    ports:
+      - "3020:3020"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    networks:
+      - banking-recon-test-network
+    volumes:
+      - ./apps/mt-10-currency:/app/apps/mt-10-currency
+      - ./libs:/app/libs
+      - /app/node_modules
+
+  mt-11-rounding:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        SERVICE_NAME: mt-11-rounding
+    container_name: banking-recon-mt-11-test
+    env_file:
+      - .env.test
+    environment:
+      MT_11_PORT: 3021
+    ports:
+      - "3021:3021"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    networks:
+      - banking-recon-test-network
+    volumes:
+      - ./apps/mt-11-rounding:/app/apps/mt-11-rounding
+      - ./libs:/app/libs
+      - /app/node_modules
+
+  mt-12-high-volume-payer:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        SERVICE_NAME: mt-12-high-volume-payer
+    container_name: banking-recon-mt-12-test
+    env_file:
+      - .env.test
+    environment:
+      MT_12_PORT: 3022
+    ports:
+      - "3022:3022"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    networks:
+      - banking-recon-test-network
+    volumes:
+      - ./apps/mt-12-high-volume-payer:/app/apps/mt-12-high-volume-payer
+      - ./libs:/app/libs
+      - /app/node_modules
+
+  mt-13-standing-orders:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        SERVICE_NAME: mt-13-standing-orders
+    container_name: banking-recon-mt-13-test
+    env_file:
+      - .env.test
+    environment:
+      MT_13_PORT: 3023
+    ports:
+      - "3023:3023"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    networks:
+      - banking-recon-test-network
+    volumes:
+      - ./apps/mt-13-standing-orders:/app/apps/mt-13-standing-orders
+      - ./libs:/app/libs
+      - /app/node_modules
+
+  mt-14-unmatched-pool:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        SERVICE_NAME: mt-14-unmatched-pool
+    container_name: banking-recon-mt-14-test
+    env_file:
+      - .env.test
+    environment:
+      MT_14_PORT: 3024
+    ports:
+      - "3024:3024"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    networks:
+      - banking-recon-test-network
+    volumes:
+      - ./apps/mt-14-unmatched-pool:/app/apps/mt-14-unmatched-pool
+      - ./libs:/app/libs
+      - /app/node_modules
+
+  mt-15-manual-classification:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        SERVICE_NAME: mt-15-manual-classification
+    container_name: banking-recon-mt-15-test
+    env_file:
+      - .env.test
+    environment:
+      MT_15_PORT: 3025
+    ports:
+      - "3025:3025"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    networks:
+      - banking-recon-test-network
+    volumes:
+      - ./apps/mt-15-manual-classification:/app/apps/mt-15-manual-classification
+      - ./libs:/app/libs
+      - /app/node_modules
+
+  mt-16-final-validation:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        SERVICE_NAME: mt-16-final-validation
+    container_name: banking-recon-mt-16-test
+    env_file:
+      - .env.test
+    environment:
+      MT_16_PORT: 3026
+    ports:
+      - "3026:3026"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    networks:
+      - banking-recon-test-network
+    volumes:
+      - ./apps/mt-16-final-validation:/app/apps/mt-16-final-validation
+      - ./libs:/app/libs
+      - /app/node_modules
+
+volumes:
+  postgres_test_data:
+    driver: local
+  redis_test_data:
+    driver: local
+  minio_test_data:
+    driver: local
+
+networks:
+  banking-recon-test-network:
+    driver: bridge

@@ -52,7 +52,7 @@ export class BruteForceProtectionService {
    * @throws UnauthorizedException if account is locked
    */
   async checkAccountLock(user: User): Promise<void> {
-    if (this.isAccountLocked(user)) {
+    if (this.isAccountLocked(user) && user.accountLockedUntil) {
       const lockExpiresIn = Math.ceil(
         (user.accountLockedUntil.getTime() - Date.now()) / 1000 / 60,
       );

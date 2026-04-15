@@ -50,6 +50,12 @@ export class Tenant {
 
   @Column({ nullable: true })
   stripeSubscriptionId: string;
+
+  @Column({ default: 'active' })
+  subscriptionStatus: string; // 'active' | 'past_due' | 'canceled' | 'trialing'
+
+  @Column({ type: 'date', nullable: true })
+  nextBillingDate: Date;
   // PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP
 
   // PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP
@@ -70,6 +76,23 @@ export class Tenant {
     storageMB: number;
     users: number;
   };
+
+  // Direct access columns for analytics (denormalized for performance)
+  @Column({ type: 'integer', default: 0 })
+  bankAccountsCount: number;
+
+  @Column({ type: 'integer', default: 0 })
+  transactionsCount: number; // Total transactions processed
+
+  @Column({ type: 'float', default: 0 })
+  storageUsedMB: number;
+
+  @Column({ type: 'integer', default: 0 })
+  usersCount: number;
+
+  // Tracking
+  @Column({ nullable: true, type: 'timestamp' })
+  lastLoginAt: Date | undefined;
   // PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP
 
   // PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP

@@ -41,6 +41,9 @@ export class AuditLog {
   @Index()
   userId: string | null;
 
+  @Column({ nullable: true, type: 'varchar' })
+  userEmail: string | undefined; // Denormalized for quick access
+
   @ManyToOne(() => User, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'userId' })
   user: User;
@@ -49,6 +52,10 @@ export class AuditLog {
   @Column({ length: 100 })
   @Index()
   eventType: string; // login, logout, register, password_reset, api_key_created, etc.
+
+  @Column({ length: 100 })
+  @Index()
+  action: string; // Alias for eventType for backwards compatibility
 
   @Column({ length: 50 })
   @Index()
@@ -65,7 +72,7 @@ export class AuditLog {
   metadata: Record<string, any>; // Additional context
 
   // Request information
-  @Column({ length: 10, nullable: true })
+  @Column({ type: 'varchar', length: 10, nullable: true })
   httpMethod: string | null; // GET, POST, PUT, DELETE, etc.
 
   @Column({ type: 'text', nullable: true })
@@ -78,21 +85,21 @@ export class AuditLog {
   responseTime: number | null; // Response time in milliseconds
 
   // Client information
-  @Column({ length: 45, nullable: true })
+  @Column({ type: 'varchar', length: 45, nullable: true })
   @Index()
   ipAddress: string | null; // IPv4 or IPv6
 
   @Column({ type: 'text', nullable: true })
   userAgent: string | null; // Browser/client information
 
-  @Column({ length: 255, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   deviceId: string | null; // Device identifier if available
 
   // Geolocation (optional, can be populated from IP)
-  @Column({ length: 100, nullable: true })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   country: string | null;
 
-  @Column({ length: 100, nullable: true })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   city: string | null;
 
   // Security indicators
@@ -106,7 +113,7 @@ export class AuditLog {
   failureReason: string | null; // Why operation failed
 
   // Resource tracking
-  @Column({ length: 100, nullable: true })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   resourceType: string | null; // user, api_key, transaction, etc.
 
   @Column({ type: 'uuid', nullable: true })
@@ -127,6 +134,10 @@ export class AuditLog {
   @CreateDateColumn()
   @Index()
   createdAt: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  @Index()
+  timestamp: Date; // Alias for createdAt for backwards compatibility
 
   // Retention policy flag
   @Column({ default: false })

@@ -106,7 +106,7 @@ export class Notification {
    */
   markAsUnread(): void {
     this.isRead = false;
-    this.readAt = null;
+    this.readAt = undefined;
   }
 
   /**

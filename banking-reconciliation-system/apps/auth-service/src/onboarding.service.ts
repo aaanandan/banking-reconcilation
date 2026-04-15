@@ -214,7 +214,7 @@ export class OnboardingService {
 
     return {
       tenantId,
-      isOnTrial,
+      isOnTrial: isOnTrial ?? false,
       trialStartDate: onboarding.trialStartDate,
       trialEndDate: onboarding.trialEndDate,
       daysRemaining,
@@ -449,7 +449,14 @@ export class OnboardingService {
     const tenant = await this.tenantService.findByTenantId(tenantId);
     const trialStatus = await this.getTrialStatus(tenantId);
 
-    const recommendations = [];
+    const recommendations: Array<{
+      type: 'action' | 'tip' | 'upgrade';
+      priority: 'high' | 'medium' | 'low';
+      title: string;
+      description: string;
+      actionUrl?: string;
+      actionLabel?: string;
+    }> = [];
 
     // Check trial expiration
     if (trialStatus.isOnTrial && trialStatus.daysRemaining && trialStatus.daysRemaining <= 3) {
@@ -586,14 +593,14 @@ export class OnboardingService {
     if (dto.keepProgress) {
       // Reset completion status but keep step data
       onboarding.isComplete = false;
-      onboarding.completedAt = null;
+      onboarding.completedAt = undefined;
       onboarding.currentStep = OnboardingStepEnum.WELCOME;
       onboarding.overallProgress = 0;
     } else {
       // Full reset
       onboarding.steps = this.initializeSteps();
       onboarding.isComplete = false;
-      onboarding.completedAt = null;
+      onboarding.completedAt = undefined;
       onboarding.currentStep = OnboardingStepEnum.WELCOME;
       onboarding.overallProgress = 0;
     }

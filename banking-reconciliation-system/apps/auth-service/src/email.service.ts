@@ -162,7 +162,10 @@ export class EmailService {
   private async getTemplate(templateName: string): Promise<handlebars.TemplateDelegate> {
     // Check cache first
     if (this.templateCache.has(templateName)) {
-      return this.templateCache.get(templateName);
+      const cached = this.templateCache.get(templateName);
+      if (cached) {
+        return cached;
+      }
     }
 
     // Load template from file
