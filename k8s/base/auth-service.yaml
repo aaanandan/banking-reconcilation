@@ -1,0 +1,113 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-service-config
+  namespace: banking-reconciliation
+data:
+  NODE_ENV: "development"
+  AUTH_SERVICE_PORT: "3001"
+  DATABASE_HOST: "postgres"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "banking_reconciliation"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: auth-service-secret
+  namespace: banking-reconciliation
+type: Opaque
+stringData:
+  JWT_SECRET: "your-secret-key-change-in-production-min-32-chars"
+  DATABASE_PASSWORD: "postgres_dev_password"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: banking-reconciliation
+  labels:
+    app: auth-service
+    tier: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+        tier: backend
+    spec:
+      containers:
+      - name: auth-service
+        image: banking-auth-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3001
+          name: http
+        - containerPort: 9091
+          name: metrics
+        envFrom:
+        - configMapRef:
+            name: auth-service-config
+        - secretRef:
+            name: auth-service-secret
+        env:
+        - name: DATABASE_URL
+          value: "postgresql://postgres:$(DATABASE_PASSWORD)@postgres:5432/banking_reconciliation"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3001
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: banking-reconciliation
+  labels:
+    app: auth-service
+spec:
+  type: ClusterIP
+  selector:
+    app: auth-service
+  ports:
+  - name: http
+    port: 3001
+    targetPort: 3001
+  - name: metrics
+    port: 9091
+    targetPort: 9091
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service-lb
+  namespace: banking-reconciliation
+spec:
+  type: LoadBalancer
+  selector:
+    app: auth-service
+  ports:
+  - name: http
+    port: 3001
+    targetPort: 3001
+    nodePort: 30001
