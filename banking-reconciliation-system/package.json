@@ -16,6 +16,8 @@
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
+    "start:auth": "nest start auth-service",
+    "start:auth:dev": "nest start auth-service --watch",
     "start:data-prep": "nest start data-prep-service",
     "start:data-prep:dev": "nest start data-prep-service --watch",
     "start:state-manager": "nest start state-manager-service",

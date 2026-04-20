@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3004';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -29,7 +29,7 @@ apiClient.interceptors.response.use(
 );
 
 export const dataPrepClient = axios.create({
-  baseURL: import.meta.env.VITE_DATA_PREP_URL || 'http://localhost:3000',
+  baseURL: import.meta.env.VITE_DATA_PREP_URL || 'http://localhost:3003',
   headers: {},
 });
 
