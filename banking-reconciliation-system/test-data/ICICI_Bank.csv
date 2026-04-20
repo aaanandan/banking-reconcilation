@@ -1,0 +1,7 @@
+Transaction Date,Particulars,Amount,Type,Reference Number
+2024-01-02,Office Supplies Purchase,3500.00,DR,REF001
+2024-01-08,Customer Payment,12000.00,CR,REF002
+2024-01-12,Equipment Purchase,8500.00,DR,REF003
+2024-01-18,Service Revenue,18000.00,CR,REF004
+2024-01-22,Insurance Premium,4200.00,DR,REF005
+2024-01-28,Consulting Income,22000.00,CR,REF006

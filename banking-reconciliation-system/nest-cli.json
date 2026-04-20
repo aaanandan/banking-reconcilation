@@ -1,0 +1,221 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "apps/banking-reconciliation-system/src",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "webpack": false,
+    "tsConfigPath": "apps/banking-reconciliation-system/tsconfig.app.json"
+  },
+  "monorepo": true,
+  "root": "apps/banking-reconciliation-system",
+  "projects": {
+    "auth-service": {
+      "type": "application",
+      "root": "apps/auth-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/auth-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/auth-service/tsconfig.app.json"
+      }
+    },
+    "data-prep-service": {
+      "type": "application",
+      "root": "apps/data-prep-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/data-prep-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/data-prep-service/tsconfig.app.json"
+      }
+    },
+    "learning-service": {
+      "type": "application",
+      "root": "apps/learning-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/learning-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/learning-service/tsconfig.app.json"
+      }
+    },
+    "match-orchestrator": {
+      "type": "application",
+      "root": "apps/match-orchestrator",
+      "entryFile": "main",
+      "sourceRoot": "apps/match-orchestrator/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/match-orchestrator/tsconfig.app.json"
+      }
+    },
+    "mt-01-exact-match": {
+      "type": "application",
+      "root": "apps/mt-01-exact-match",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-01-exact-match/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-01-exact-match/tsconfig.app.json"
+      }
+    },
+    "mt-02-near-exact": {
+      "type": "application",
+      "root": "apps/mt-02-near-exact",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-02-near-exact/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-02-near-exact/tsconfig.app.json"
+      }
+    },
+    "mt-03-bank-fees": {
+      "type": "application",
+      "root": "apps/mt-03-bank-fees",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-03-bank-fees/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-03-bank-fees/tsconfig.app.json"
+      }
+    },
+    "mt-04-interest": {
+      "type": "application",
+      "root": "apps/mt-04-interest",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-04-interest/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-04-interest/tsconfig.app.json"
+      }
+    },
+    "mt-05-split-payments": {
+      "type": "application",
+      "root": "apps/mt-05-split-payments",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-05-split-payments/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-05-split-payments/tsconfig.app.json"
+      }
+    },
+    "mt-06-consolidated-deposits": {
+      "type": "application",
+      "root": "apps/mt-06-consolidated-deposits",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-06-consolidated-deposits/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-06-consolidated-deposits/tsconfig.app.json"
+      }
+    },
+    "mt-07-duplicate-postings": {
+      "type": "application",
+      "root": "apps/mt-07-duplicate-postings",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-07-duplicate-postings/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-07-duplicate-postings/tsconfig.app.json"
+      }
+    },
+    "mt-08-reversals": {
+      "type": "application",
+      "root": "apps/mt-08-reversals",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-08-reversals/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-08-reversals/tsconfig.app.json"
+      }
+    },
+    "mt-09-timing-differences": {
+      "type": "application",
+      "root": "apps/mt-09-timing-differences",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-09-timing-differences/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-09-timing-differences/tsconfig.app.json"
+      }
+    },
+    "mt-10-currency": {
+      "type": "application",
+      "root": "apps/mt-10-currency",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-10-currency/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-10-currency/tsconfig.app.json"
+      }
+    },
+    "mt-11-rounding": {
+      "type": "application",
+      "root": "apps/mt-11-rounding",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-11-rounding/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-11-rounding/tsconfig.app.json"
+      }
+    },
+    "mt-12-high-volume-payer": {
+      "type": "application",
+      "root": "apps/mt-12-high-volume-payer",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-12-high-volume-payer/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-12-high-volume-payer/tsconfig.app.json"
+      }
+    },
+    "mt-13-standing-orders": {
+      "type": "application",
+      "root": "apps/mt-13-standing-orders",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-13-standing-orders/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-13-standing-orders/tsconfig.app.json"
+      }
+    },
+    "mt-14-unmatched-pool": {
+      "type": "application",
+      "root": "apps/mt-14-unmatched-pool",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-14-unmatched-pool/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-14-unmatched-pool/tsconfig.app.json"
+      }
+    },
+    "mt-15-manual-classification": {
+      "type": "application",
+      "root": "apps/mt-15-manual-classification",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-15-manual-classification/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-15-manual-classification/tsconfig.app.json"
+      }
+    },
+    "mt-16-final-validation": {
+      "type": "application",
+      "root": "apps/mt-16-final-validation",
+      "entryFile": "main",
+      "sourceRoot": "apps/mt-16-final-validation/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mt-16-final-validation/tsconfig.app.json"
+      }
+    },
+    "question-manager-service": {
+      "type": "application",
+      "root": "apps/question-manager-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/question-manager-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/question-manager-service/tsconfig.app.json"
+      }
+    },
+    "shared": {
+      "type": "library",
+      "root": "libs/shared",
+      "entryFile": "index",
+      "sourceRoot": "libs/shared/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/shared/tsconfig.lib.json"
+      }
+    },
+    "state-manager-service": {
+      "type": "application",
+      "root": "apps/state-manager-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/state-manager-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/state-manager-service/tsconfig.app.json"
+      }
+    }
+  }
+}

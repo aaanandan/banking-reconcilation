@@ -1,0 +1,42 @@
+# Multi-stage Dockerfile for Testing
+FROM node:18-alpine AS base
+
+# Install dependencies
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    curl
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY tsconfig*.json ./
+COPY nest-cli.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code
+COPY apps ./apps
+COPY libs ./libs
+COPY test ./test
+
+# Build shared library first
+RUN npm run build:shared
+
+# Build stage for specific service
+ARG SERVICE_NAME
+RUN if [ -n "$SERVICE_NAME" ]; then npm run build $SERVICE_NAME || true; fi
+
+# Expose ports (will be overridden by docker-compose)
+EXPOSE 3000-3030
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost:${PORT:-3000}/health || exit 1
+
+# Default command (will be overridden by docker-compose)
+CMD ["npm", "run", "start:dev"]

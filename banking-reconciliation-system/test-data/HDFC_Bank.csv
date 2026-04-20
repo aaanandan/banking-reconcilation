@@ -1,0 +1,7 @@
+Date,Description,Amount,Type,Balance
+2024-01-01,Opening Balance,50000.00,CR,50000.00
+2024-01-05,Payment to Vendor A,5000.00,DR,45000.00
+2024-01-10,Salary Received,25000.00,CR,70000.00
+2024-01-15,Rent Payment,15000.00,DR,55000.00
+2024-01-20,Client Payment Received,30000.00,CR,85000.00
+2024-01-25,Utilities Bill,2500.00,DR,82500.00
