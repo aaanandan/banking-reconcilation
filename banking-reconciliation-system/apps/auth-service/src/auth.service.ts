@@ -69,6 +69,7 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(dto.password, 10);
     const user = this.userRepository.create({
       tenantId: tenant.tenantId,
+      tenant: tenant,
       email: dto.email,
       passwordHash: hashedPassword,
       name: dto.name,

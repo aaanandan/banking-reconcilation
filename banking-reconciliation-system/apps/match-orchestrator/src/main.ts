@@ -28,8 +28,9 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  await app.listen(3005);
-  console.log('Match Orchestrator Service is running on port 3005');
-  console.log('Swagger documentation available at http://localhost:3005/api');
+  const port = process.env.ORCHESTRATOR_PORT || 3005;
+  await app.listen(port);
+  console.log(`Match Orchestrator Service is running on port ${port}`);
+  console.log(`Swagger documentation available at http://localhost:${port}/api`);
 }
 bootstrap();

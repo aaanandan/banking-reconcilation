@@ -8,6 +8,7 @@ import {
   UpdateDateColumn,
   OneToMany,
   ManyToOne,
+  JoinColumn,
   Index,
 } from 'typeorm';
 import { Tenant } from './tenant.entity';
@@ -27,6 +28,7 @@ export class User {
   tenantId: string;
 
   @ManyToOne(() => Tenant, tenant => tenant.users)
+  @JoinColumn({ name: 'tenant_fk_id' })
   tenant: Tenant;
   // ═══════════════════════════════════════════════════════════
 
@@ -36,10 +38,10 @@ export class User {
   @Column({ nullable: true })
   passwordHash: string; // Nullable for OAuth users
 
-  @Column()
+  @Column({ nullable: true })
   firstName: string;
 
-  @Column()
+  @Column({ nullable: true })
   lastName: string;
 
   @Column({ nullable: true })

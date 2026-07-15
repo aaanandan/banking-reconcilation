@@ -24,8 +24,9 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  await app.listen(3001);
-  console.log('Data Prep Service is running on port 3001');
-  console.log('Swagger documentation available at http://localhost:3001/api');
+  const port = process.env.DATA_PREP_SERVICE_PORT || 3003;
+  await app.listen(port);
+  console.log(`Data Prep Service is running on port ${port}`);
+  console.log(`Swagger documentation available at http://localhost:${port}/api`);
 }
 bootstrap();

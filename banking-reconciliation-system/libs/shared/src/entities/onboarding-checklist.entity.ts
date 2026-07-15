@@ -34,7 +34,6 @@ export class OnboardingChecklist {
   id: string;
 
   @Column({ name: 'tenant_id', type: 'varchar', length: 255 })
-  @Index()
   tenantId: string;
 
   @Column({ name: 'user_id', type: 'varchar', length: 255, nullable: true })

@@ -19,16 +19,19 @@ RUN npm ci
 COPY . .
 
 # Build arguments for environment variables
-ARG VITE_API_BASE_URL=http://localhost:3001
-ARG VITE_AUTH_SERVICE_URL=http://localhost:3001/api/auth
-ARG VITE_DATA_PREP_URL=http://localhost:3003/api
-ARG VITE_ORCHESTRATOR_URL=http://localhost:3004/api
+# NOTE: the app code (src/api/client.ts) only ever reads VITE_API_URL and
+# VITE_DATA_PREP_URL - it does NOT read VITE_API_BASE_URL, VITE_AUTH_SERVICE_URL,
+# or VITE_ORCHESTRATOR_URL. Those three were dead config in earlier versions of
+# this file (see HANDOVER_GUIDE.md). Also: VITE_DATA_PREP_URL must NOT have an
+# /api suffix - the real routes are e.g. /data-prep/health, not /api/data-prep/health.
+ARG VITE_API_URL=http://localhost:3001
+ARG VITE_DATA_PREP_URL=http://localhost:3003
 
-# Set environment variables for build
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-ENV VITE_AUTH_SERVICE_URL=$VITE_AUTH_SERVICE_URL
+# Set environment variables for build (Vite inlines these at build time - they
+# have no effect at container runtime, so they MUST be passed as build args,
+# not docker-compose `environment:`)
+ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_DATA_PREP_URL=$VITE_DATA_PREP_URL
-ENV VITE_ORCHESTRATOR_URL=$VITE_ORCHESTRATOR_URL
 
 # Build the application
 RUN npm run build

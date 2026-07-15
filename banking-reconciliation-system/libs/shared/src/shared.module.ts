@@ -19,7 +19,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         password: configService.get('DB_PASSWORD', 'postgres'),
         database: configService.get('DB_DATABASE', 'reconciliation_db'),
         entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-        synchronize: true, // ONLY for development
+        synchronize: false, // schema fully established by prior sync bootstrap; disabled to avoid concurrent multi-service races
         logging: false,
       }),
       inject: [ConfigService],

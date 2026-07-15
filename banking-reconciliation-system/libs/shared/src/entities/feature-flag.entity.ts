@@ -36,7 +36,6 @@ export class FeatureFlag {
   id: string;
 
   @Column({ type: 'varchar', length: 255, unique: true })
-  @Index()
   key: string;
 
   @Column({ type: 'varchar', length: 255 })

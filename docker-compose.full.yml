@@ -51,7 +51,12 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres_dev_password}@postgres:5432/${POSTGRES_DB:-banking_reconciliation}
       - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-in-production}
       - AUTH_SERVICE_PORT=3001
+      - HEALTH_CHECK_PORT=3001
       - PROMETHEUS_PORT=9091
+      # ALLOWED_ORIGINS must be set explicitly - the code's hardcoded fallback
+      # does NOT include :5173, so the frontend container gets CORS errors
+      # without this (see HANDOVER_GUIDE.md CORS section).
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001,http://localhost:4200,http://localhost:5173,http://localhost:8080
     depends_on:
       postgres:
         condition: service_healthy
@@ -59,7 +64,9 @@ services:
       - banking-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      # auth-service has no public unauthenticated /health route (the only one,
+      # /admin/health, requires JWT+AdminGuard) - just check the port is open.
+      test: ["CMD", "node", "-e", "const net=require('net');const s=net.connect(3001,'localhost');s.on('connect',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -78,6 +85,7 @@ services:
       - NODE_ENV=${NODE_ENV:-development}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres_dev_password}@postgres:5432/${POSTGRES_DB:-banking_reconciliation}
       - DATA_PREP_SERVICE_PORT=3003
+      - HEALTH_CHECK_PORT=3003
     depends_on:
       postgres:
         condition: service_healthy
@@ -86,6 +94,11 @@ services:
     restart: unless-stopped
     volumes:
       - uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3003/data-prep/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Match Orchestrator - Port 3004
   match-orchestrator:
@@ -101,14 +114,24 @@ services:
       - NODE_ENV=${NODE_ENV:-development}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres_dev_password}@postgres:5432/${POSTGRES_DB:-banking_reconciliation}
       - ORCHESTRATOR_PORT=3004
+      - HEALTH_CHECK_PORT=3004
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - banking-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3004/orchestrate/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # State Manager Service - Port 3005
+  # ⚠️ KNOWN ISSUE: app code hardcodes app.listen(3002), ignores STATE_MANAGER_PORT
+  # entirely. This service's container will NOT be reachable on the 3005 mapping
+  # below until apps/state-manager-service/src/main.ts is fixed to read the env
+  # var (same pattern as match-orchestrator above). See HANDOVER_GUIDE.md.
   state-manager-service:
     build:
       context: ./banking-reconciliation-system
@@ -237,14 +260,17 @@ services:
       context: ./banking-recon-frontend
       dockerfile: Dockerfile
       target: production
+      # Vite bakes these into the static bundle at BUILD time - setting them
+      # under `environment:` below (the old way this file did it) has zero
+      # effect since this is a static Nginx-served build with no Node process
+      # reading env vars at runtime. Must be build args. Names must match what
+      # src/api/client.ts actually reads: VITE_API_URL, VITE_DATA_PREP_URL.
+      args:
+        VITE_API_URL: http://localhost:3001
+        VITE_DATA_PREP_URL: http://localhost:3003
     container_name: banking-frontend
     ports:
       - "5173:80"
-    environment:
-      - VITE_API_BASE_URL=http://localhost:3001
-      - VITE_AUTH_SERVICE_URL=http://localhost:3001/api/auth
-      - VITE_DATA_PREP_URL=http://localhost:3003/api
-      - VITE_ORCHESTRATOR_URL=http://localhost:3004/api
     networks:
       - banking-network
     depends_on:
